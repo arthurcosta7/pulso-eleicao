@@ -1,25 +1,70 @@
-# Pulso — Eleições 2026
+# Pulso — React + Node.js
 
-Painel estático, sem dependências, para o segundo turno presidencial de 2026. Acesse com `npm run dev` (http://127.0.0.1:4173). Testes: `npm test`.
+Painel de apuração presidencial de 2026 com dados reais do TSE, navegação entre abas e gráfico conjunto do histórico observado, situação atual e previsão até 100% das seções.
 
-## Dados reais
+## Executar
 
-Consulta diretamente os arquivos públicos EA20 do TSE, eleição 6258, cargo 1, em BR, nas 27 UFs e ZZ. O servidor do TSE permite CORS; nenhuma chave ou servidor intermediário é necessário. São até 4 requisições simultâneas, 29 por consulta, com atualização a cada 60 segundos enquanto a página está visível. Ao voltar à aba, faz uma nova consulta.
+Requer Node.js 22.13 ou superior.
 
-O horário exibido é o da fonte; consulta recente não significa votos recentes. O total BR já inclui exterior. Cada abrangência pode ter uma geração diferente. Falhas preservam o último retrato completo e exibem aviso. A primeira consulta incompleta suprime a projeção. O último retrato e os 180 registros mais recentes ficam no localStorage deste navegador. Não há coleta de dados pessoais ou envio do histórico para um servidor.
+```powershell
+npm ci
+npm run dev
+```
 
-## Modelo experimental
+Desenvolvimento: http://127.0.0.1:5173.
 
-Para cada UF e ZZ, votos restantes = votos válidos do 1º turno × (seções 2º turno / seções 1º turno) × fração de seções restantes. A preferência de Lula nas urnas restantes combina sua participação entre Lula e Flávio no 1º turno com a participação observada no 2º. O peso da observação é p/(p+0,05). Somam-se os votos observados e os estimados nas 28 abrangências. Com 100% das seções totalizadas, o resultado projetado coincide com os votos observados por UF.
+```powershell
+npm test
+npm run typecheck
+npm run build
+npm start
+```
 
-Não é probabilidade de vitória, pesquisa, declaração de vencedor ou modelo validado retrospectivamente. Usa extrapolação por UF; não controla a heterogeneidade dos municípios e seções dentro da UF. A transferência de votos entre turnos e mudanças no comparecimento são limitações importantes.
+Produção em Node: http://localhost:3000. `npm start` usa o servidor HTTP de produção do Vinext em Node.js. A publicação do Sites usa a mesma aplicação compilada com o adaptador Cloudflare e compatibilidade com Node; o público e o endereço existentes são preservados.
 
-`dist/assets/reference.json` é uma cópia pública das 28 abrangências no 1º turno (6257), com URL e data de coleta. Para atualizar a referência e a malha vetorial do IBGE, execute `npm run refresh-reference`. A aplicação não usa pesquisas eleitorais.
+## Organização
 
-## Simulação
+- `app/page.tsx`: entrada da aplicação.
+- `app/api/election/route.js`: API HTTP usada pelo frontend.
+- `src/server/tse.js`: coleta oficial, validação do turno, concorrência máxima de quatro arquivos, cache de 60 segundos e deduplicação de consultas simultâneas.
+- `src/hooks/useElection.js`: consulta à API, atualização automática, cancelamento e histórico local.
+- `src/components/Dashboard.jsx`: navegação real entre abas, estado da aplicação e exportação JSON.
+- `src/components/ResultsChart.jsx`: curvas observadas e previstas dos dois candidatos, marcador atual, tooltip, teclado, unidades e escala.
+- `src/components/RegionsPanel.jsx`: mapa, filtros, ordenação e tabela de UFs.
+- `src/components/Simulator.jsx`: cenário fictício isolado da apuração oficial.
+- `src/components/Methodology.jsx`: fontes, hipóteses e limites.
+- `src/lib/model.js`: extrapolação por UF e gerador de cenários.
+- `src/lib/forecast.js`: trajetória futura ancorada no placar oficial e tratamento do histórico.
+- `data/reference.json`: primeiro turno oficial das 28 abrangências, com URLs e data de coleta.
+- `tests/`: testes do modelo, trajetória, cache, concorrência e tratamento de falhas.
 
-Ativada apenas pelo usuário, com banner e rótulos em todo o painel. Os ritmos regionais são fictícios. Nordeste mais lento é uma hipótese deste cenário, não uma afirmação sobre uma ordem fixa da apuração real. O controle de preferência altera somente as urnas que faltam. A curva simulada nunca é salva no histórico oficial.
+Os scripts de publicação e o adaptador em `worker/` pertencem ao ambiente Sites. `dist/` é gerado pelo build; código-fonte não é editado ali.
 
-## Publicação
+## Dados oficiais
 
-O manifesto `.openai/hosting.json` identifica o Site privado. O conteúdo publicado está em `dist/`. Não há etapa de compilação. A publicação segue o helper oficial do Sites e usa o mesmo commit enviado ao repositório.
+O servidor consulta os arquivos EA20 da eleição 6258, cargo Presidente, para BR, 27 UFs e ZZ. Brasil já inclui o exterior; a previsão nunca o soma uma segunda vez. O navegador faz uma única consulta à API do projeto por minuto enquanto a aba está visível. Horários de coleta e divulgação são distintos.
+
+Uma falha mantém o retrato completo anterior e sinaliza sua idade. Sem votos ou sem as 28 abrangências, a curva de previsão é suprimida. Não há substituição automática por dados fictícios.
+
+## Gráfico
+
+- Eixo horizontal: percentual de seções totalizadas.
+- Linhas contínuas: histórico realmente coletado de Lula e Flávio.
+- Marcador Agora: percentual atual da apuração e pontos dos dois candidatos.
+- Linhas tracejadas: evolução esperada dos votos restantes até 100%.
+- Unidades: percentual dos votos válidos ou votos acumulados.
+- A legenda permite exibir ou ocultar cada candidato. Setas do teclado percorrem os pontos.
+
+A previsão começa exatamente nos votos nacionais atuais e acrescenta apenas votos ainda esperados por UF. O ponto final, o número previsto e as linhas usam a mesma conta. Com 100% totalizado, previsão e situação atual coincidem.
+
+Com duas consultas diferentes, a distribuição de chegada usa o ritmo observado por UF, misturado com uma parcela proporcional para não descartar regiões temporariamente paradas. Sem essa informação, usa avanço proporcional. Isso é um cenário de ordem de chegada, não uma faixa de confiança.
+
+O histórico é mantido em memória pelo processo do servidor (até 720 registros) e salvo neste navegador. Reinícios ou troca de instância podem reiniciar o histórico do servidor. Períodos anteriores à coleta não são inventados; não existe uma coleta contínua em segundo plano quando não há visitantes.
+
+## Modelo e limites
+
+Em cada UF e ZZ, votos restantes = votos válidos do primeiro turno × razão de seções entre turnos × fração de seções restantes. A preferência combina o observado na UF com Lula / (Lula + Flávio) do primeiro turno, com peso p / (p + 0,05) para a observação atual.
+
+É uma extrapolação experimental, sem validação retrospectiva nem probabilidade de vitória. Perfis diferentes dentro de uma UF, transferência de votos, comparecimento e votos inválidos podem gerar erro. A ordem do Nordeste não é fixada no modo oficial; o simulador permite testar essa hipótese separadamente.
+
+Para atualizar a referência oficial e a malha do IBGE: `npm run refresh-reference`, seguido de novo build.

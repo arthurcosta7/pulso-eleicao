@@ -1,6 +1,6 @@
 import {test} from 'node:test';import assert from 'node:assert/strict';import {readFile} from 'node:fs/promises';
-import {normalize,project,demo,STATES,groupRows} from '../dist/model.js';
-const reference=JSON.parse(await readFile(new URL('../dist/assets/reference.json',import.meta.url))).states;
+import {normalize,project,demo,STATES,groupRows} from '../src/lib/model.js';
+const reference=JSON.parse(await readFile(new URL('../data/reference.json',import.meta.url))).states;
 test('No projection before the first vote, even with all regions loaded',()=>{const {states}=demo(reference,0),p=project(states,reference);assert.equal(p.available,false);assert.equal(p.unknown,0);assert.equal(p.observed,0);});
 test('All counted sections converge to the observed result, regardless of scenario swing',()=>{const {states,national}=demo(reference,1),p=project(states,reference,{swing:10});assert.equal(p.available,true);assert.equal(p.remaining,0);assert.equal(p.lula,national.lula);assert.equal(p.flavio,national.flavio);});
 test('Exterior is counted once and regional aggregates conserve votes',()=>{const {states,national}=demo(reference,.58),p=project(states,reference),groups=groupRows(p.rows);assert.equal(p.rows.length,28);assert.equal(p.rows.filter(r=>r.uf==='ZZ').length,1);assert.equal(p.observed,national.lula+national.flavio);assert.equal(groups.reduce((s,g)=>s+g.lula,0),national.lula);assert.equal(groups.find(g=>g.name==='Exterior').states,1);});
