@@ -77,3 +77,25 @@ test('Files from a different election or round are rejected', async () => {
   assert.equal(result.snapshot, null);
   assert.equal(result.errors.length, 29);
 });
+
+test('A transient failure is retried after collecting the other UFs', async () => {
+  let failed = false;
+  const visited = [];
+  const service = createElectionService({
+    fetcher: async url => {
+      const uf = url.split('/dados/')[1].split('/')[0];
+      visited.push(uf);
+      if (uf === 'mg' && !failed) {
+        failed = true;
+        throw new Error('The operation was aborted due to timeout');
+      }
+      return Response.json(fixture(url));
+    },
+  });
+  const result = await service.get();
+  assert.equal(result.stale, false);
+  assert.deepEqual(result.errors, []);
+  assert.equal(Object.keys(result.snapshot.states).length, 28);
+  assert.equal(visited.length, 30);
+  assert.equal(visited.at(-1), 'mg');
+});

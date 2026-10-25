@@ -25,18 +25,23 @@ export function createElectionService({ fetcher = fetch, now = Date.now } = {}) 
     const signal = AbortSignal.timeout(25_000);
     const codes = ['BR', ...STATES.map(state => state.uf)];
 
+    async function loadScope(uf) {
+      const requestSignal = AbortSignal.any([signal, AbortSignal.timeout(6000)]);
+      const response = await fetcher(officialURL(uf), { signal: requestSignal });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const payload = await response.json();
+      if (String(payload.ele) !== '6258' || String(payload.t) !== '2') {
+        throw new Error('Arquivo de outro turno ou eleição');
+      }
+      const value = normalize(payload);
+      if (uf === 'BR') national = value;
+      else states[uf] = value;
+    }
+
     for (let offset = 0; offset < codes.length; offset += 4) {
       await Promise.all(codes.slice(offset, offset + 4).map(async uf => {
         try {
-          const response = await fetcher(officialURL(uf), { signal });
-          if (!response.ok) throw new Error(`HTTP ${response.status}`);
-          const payload = await response.json();
-          if (String(payload.ele) !== '6258' || String(payload.t) !== '2') {
-            throw new Error('Arquivo de outro turno ou eleição');
-          }
-          const value = normalize(payload);
-          if (uf === 'BR') national = value;
-          else states[uf] = value;
+          await loadScope(uf);
         } catch (error) {
           errors.push({ uf, message: error.message });
         }
@@ -47,6 +52,18 @@ export function createElectionService({ fetcher = fetch, now = Date.now } = {}) 
         }
         break;
       }
+    }
+
+    const platformBlocked = errors.some(error => /HTTP (403|429)/.test(error.message));
+    if (!signal.aborted && !platformBlocked && errors.length > 0 && errors.length <= 4) {
+      await Promise.all([...errors].map(async error => {
+        try {
+          await loadScope(error.uf);
+          errors.splice(errors.indexOf(error), 1);
+        } catch (failure) {
+          error.message = failure.message;
+        }
+      }));
     }
 
     const checkedAt = new Date(now()).toISOString();
