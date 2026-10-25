@@ -10,8 +10,12 @@ export async function GET() {
       headers: { 'Cache-Control': 'no-store' },
     });
   } catch {
-    return Response.json({ error: 'Não foi possível consultar o TSE. Tente novamente em um minuto.' }, {
-      status: 503, headers: { 'Cache-Control': 'no-store' },
-    });
+    return Response.json(
+      { error: 'Não foi possível consultar o TSE. Tente novamente em um minuto.' },
+      {
+        status: 503,
+        headers: { 'Cache-Control': 'no-store' },
+      },
+    );
   }
 }

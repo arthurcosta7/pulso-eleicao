@@ -31,16 +31,17 @@ export const STATES = [
   ['ZZ', 'Exterior', 5],
 ].map(([uf, name, region]) => ({ uf, name, region: REGIONS[region] }));
 
-const asNumber = value => Number(String(value ?? 0).replace(',', '.'));
+const asNumber = (value) => Number(String(value ?? 0).replace(',', '.'));
 
 export function normalize(data) {
-  const cargo = data.carg?.find(item => String(item.cd) === '1');
+  const cargo = data.carg?.find((item) => String(item.cd) === '1');
   if (!cargo || !data.s || !data.v) throw new Error('Formato do TSE não reconhecido');
 
-  const candidates = (cargo.agr ?? []).flatMap(group =>
-    (group.par ?? []).flatMap(party => party.cand ?? []));
-  const lulaCandidate = candidates.find(candidate => String(candidate.n) === '13');
-  const flavioCandidate = candidates.find(candidate => String(candidate.n) === '22');
+  const candidates = (cargo.agr ?? []).flatMap((group) =>
+    (group.par ?? []).flatMap((party) => party.cand ?? []),
+  );
+  const lulaCandidate = candidates.find((candidate) => String(candidate.n) === '13');
+  const flavioCandidate = candidates.find((candidate) => String(candidate.n) === '22');
   if (!lulaCandidate || !flavioCandidate) throw new Error('Candidaturas esperadas ausentes');
 
   const result = {
@@ -56,14 +57,19 @@ export function normalize(data) {
     time: data.ht || data.hg,
     id: data.idg,
     final: data.tf === 's',
-    elected: candidates.find(candidate => candidate.e === 's'
-      && /^eleito$/i.test(candidate.st ?? ''))?.n ?? null,
+    elected:
+      candidates.find((candidate) => candidate.e === 's' && /^eleito$/i.test(candidate.st ?? ''))
+        ?.n ?? null,
   };
 
-  const invalidNumber = Object.values(result).some(value =>
-    typeof value === 'number' && (!Number.isFinite(value) || value < 0));
-  if (invalidNumber || result.counted > result.sections
-    || result.lula + result.flavio > result.valid) {
+  const invalidNumber = Object.values(result).some(
+    (value) => typeof value === 'number' && (!Number.isFinite(value) || value < 0),
+  );
+  if (
+    invalidNumber ||
+    result.counted > result.sections ||
+    result.lula + result.flavio > result.valid
+  ) {
     throw new Error('Totais inválidos no arquivo do TSE');
   }
   return result;
@@ -92,12 +98,13 @@ export function project(states, reference) {
     const prior = baselinePair ? baseline.lula / baselinePair : 0.5;
     const credibility = progress / (progress + 0.05);
     const historicalVotesPerSection = baseline.sections ? baseline.valid / baseline.sections : 0;
-    const observedVotesPerSection = current.counted ? votes / current.counted : historicalVotesPerSection;
-    const expectedVotesPerSection = credibility * observedVotesPerSection
-      + (1 - credibility) * historicalVotesPerSection;
+    const observedVotesPerSection = current.counted
+      ? votes / current.counted
+      : historicalVotesPerSection;
+    const expectedVotesPerSection =
+      credibility * observedVotesPerSection + (1 - credibility) * historicalVotesPerSection;
     const rest = Math.max(0, (current.sections - current.counted) * expectedVotesPerSection);
-    const share = votes
-      ? credibility * current.lula / votes + (1 - credibility) * prior : prior;
+    const share = votes ? (credibility * current.lula) / votes + (1 - credibility) * prior : prior;
     const estimatedLula = current.lula + rest * share;
     const estimatedFlavio = current.flavio + rest * (1 - share);
 
@@ -106,29 +113,48 @@ export function project(states, reference) {
     remaining += rest;
     observed += votes;
     rows.push({
-      ...info, ...current, progress, remaining: rest,
-      estimatedLula, estimatedFlavio, share, prior, credibility,
-      referenceLula: baseline.lula, referenceFlavio: baseline.flavio,
+      ...info,
+      ...current,
+      progress,
+      remaining: rest,
+      estimatedLula,
+      estimatedFlavio,
+      share,
+      prior,
+      credibility,
+      referenceLula: baseline.lula,
+      referenceFlavio: baseline.flavio,
     });
   }
 
   return {
-    lula, flavio, remaining, observed, unknown, rows,
+    lula,
+    flavio,
+    remaining,
+    observed,
+    unknown,
+    rows,
     share: lula + flavio ? lula / (lula + flavio) : null,
     available: unknown === 0 && observed > 0,
   };
 }
 
 export function groupRows(rows) {
-  return REGIONS.map(name => {
-    const matching = rows.filter(row => row.region === name);
-    const sum = key => matching.reduce((total, row) => total + row[key], 0);
+  return REGIONS.map((name) => {
+    const matching = rows.filter((row) => row.region === name);
+    const sum = (key) => matching.reduce((total, row) => total + row[key], 0);
     return {
-      name, states: matching.length,
-      lula: sum('lula'), flavio: sum('flavio'),
-      sections: sum('sections'), counted: sum('counted'), remaining: sum('remaining'),
-      estimatedLula: sum('estimatedLula'), estimatedFlavio: sum('estimatedFlavio'),
-      referenceLula: sum('referenceLula'), referenceFlavio: sum('referenceFlavio'),
+      name,
+      states: matching.length,
+      lula: sum('lula'),
+      flavio: sum('flavio'),
+      sections: sum('sections'),
+      counted: sum('counted'),
+      remaining: sum('remaining'),
+      estimatedLula: sum('estimatedLula'),
+      estimatedFlavio: sum('estimatedFlavio'),
+      referenceLula: sum('referenceLula'),
+      referenceFlavio: sum('referenceFlavio'),
       remainingLula: matching.reduce((total, row) => total + row.remaining * row.share, 0),
       remainingFlavio: matching.reduce((total, row) => total + row.remaining * (1 - row.share), 0),
     };

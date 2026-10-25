@@ -4,9 +4,31 @@ import { createElectionService, REFRESH_INTERVAL } from '../src/server/tse.js';
 
 function fixture(uf) {
   return {
-    ele: '6258', t: '2', idg: `fixture-${uf}`, dg: '25/10/2026', hg: '19:00:00',
-    carg: [{ cd: '1', agr: [{ par: [{ cand: [{ n: '13', vap: '60' }, { n: '22', vap: '40' }] }] }] }],
-    s: { ts: '20', st: '10' }, v: { vv: '100' }, e: { te: '1000' },
+    ele: '6258',
+    t: '2',
+    idg: `fixture-${uf}`,
+    dg: '25/10/2026',
+    hg: '19:00:00',
+    carg: [
+      {
+        cd: '1',
+        agr: [
+          {
+            par: [
+              {
+                cand: [
+                  { n: '13', vap: '60' },
+                  { n: '22', vap: '40' },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    ],
+    s: { ts: '20', st: '10' },
+    v: { vv: '100' },
+    e: { te: '1000' },
   };
 }
 
@@ -17,8 +39,10 @@ test('Backend deduplicates concurrent requests, caps concurrency at four and cac
   let currentTime = 0;
   const service = createElectionService({
     now: () => currentTime,
-    fetcher: async url => {
-      calls++; active++; peak = Math.max(peak, active);
+    fetcher: async (url) => {
+      calls++;
+      active++;
+      peak = Math.max(peak, active);
       await Promise.resolve();
       active--;
       return Response.json(fixture(url));
@@ -41,8 +65,10 @@ test('A failed refresh preserves the previous complete snapshot and its original
   let currentTime = 0;
   const service = createElectionService({
     now: () => currentTime,
-    fetcher: async url => fail && url.includes('/ba/')
-      ? new Response('Unavailable', { status: 503 }) : Response.json(fixture(url)),
+    fetcher: async (url) =>
+      fail && url.includes('/ba/')
+        ? new Response('Unavailable', { status: 503 })
+        : Response.json(fixture(url)),
   });
   const first = await service.get();
   currentTime = REFRESH_INTERVAL;
@@ -56,13 +82,19 @@ test('A failed refresh preserves the previous complete snapshot and its original
 
 test('An initial incomplete batch suppresses projection and a platform block stops further requests', async () => {
   let calls = 0;
-  const blocked = createElectionService({ fetcher: async () => { calls++; return new Response('', { status: 429 }); } });
+  const blocked = createElectionService({
+    fetcher: async () => {
+      calls++;
+      return new Response('', { status: 429 });
+    },
+  });
   const result = await blocked.get();
   assert.equal(result.snapshot, null);
   assert.equal(result.stale, true);
   assert.ok(calls <= 4);
   const partial = createElectionService({
-    fetcher: async url => url.includes('/zz/') ? new Response('', { status: 503 }) : Response.json(fixture(url)),
+    fetcher: async (url) =>
+      url.includes('/zz/') ? new Response('', { status: 503 }) : Response.json(fixture(url)),
   });
   const incomplete = await partial.get();
   assert.equal(incomplete.forecast.available, false);
@@ -71,7 +103,7 @@ test('An initial incomplete batch suppresses projection and a platform block sto
 
 test('Files from a different election or round are rejected', async () => {
   const service = createElectionService({
-    fetcher: async url => Response.json({ ...fixture(url), ele: '6257', t: '1' }),
+    fetcher: async (url) => Response.json({ ...fixture(url), ele: '6257', t: '1' }),
   });
   const result = await service.get();
   assert.equal(result.snapshot, null);
@@ -82,7 +114,7 @@ test('A transient failure is retried after collecting the other UFs', async () =
   let failed = false;
   const visited = [];
   const service = createElectionService({
-    fetcher: async url => {
+    fetcher: async (url) => {
       const uf = url.split('/dados/')[1].split('/')[0];
       visited.push(uf);
       if (uf === 'mg' && !failed) {

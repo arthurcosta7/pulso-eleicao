@@ -26,11 +26,18 @@ export function useElection() {
       historyRef.current = history;
       const next = { ...payload, history };
       setData(next);
-      setError(payload.stale ? 'Parte dos arquivos não pôde ser atualizada. O horário do retrato exibido está preservado.' : '');
+      setError(
+        payload.stale
+          ? 'Parte dos arquivos não pôde ser atualizada. O horário do retrato exibido está preservado.'
+          : '',
+      );
       setLastAttempt(payload.attemptedAt);
       if (!payload.stale) {
-        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)); }
-        catch { /* Storage is optional. */ }
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+        } catch {
+          /* Storage is optional. */
+        }
       }
     } catch (failure) {
       if (failure.name !== 'AbortError' && mounted.current) {
@@ -46,16 +53,25 @@ export function useElection() {
   useEffect(() => {
     mounted.current = true;
     try {
-      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY)
-        || localStorage.getItem('pulso-react-election-6258-v2') || 'null');
+      const saved = JSON.parse(
+        localStorage.getItem(STORAGE_KEY) ||
+          localStorage.getItem('pulso-react-election-6258-v2') ||
+          'null',
+      );
       if (saved?.snapshot?.national && Array.isArray(saved.history)) {
         historyRef.current = saved.history;
         if (saved.forecast?.version === MODEL_VERSION) setData({ ...saved, stale: true });
       }
-    } catch { /* Ignore an invalid local record. */ }
+    } catch {
+      /* Ignore an invalid local record. */
+    }
     refresh();
-    const interval = setInterval(() => { if (!document.hidden) refresh(); }, 60_000);
-    const onVisibility = () => { if (!document.hidden) refresh(); };
+    const interval = setInterval(() => {
+      if (!document.hidden) refresh();
+    }, 60_000);
+    const onVisibility = () => {
+      if (!document.hidden) refresh();
+    };
     document.addEventListener('visibilitychange', onVisibility);
     return () => {
       mounted.current = false;

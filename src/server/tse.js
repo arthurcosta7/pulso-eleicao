@@ -23,7 +23,7 @@ export function createElectionService({ fetcher = fetch, now = Date.now } = {}) 
     const errors = [];
     let national = null;
     const signal = AbortSignal.timeout(25_000);
-    const codes = ['BR', ...STATES.map(state => state.uf)];
+    const codes = ['BR', ...STATES.map((state) => state.uf)];
 
     async function loadScope(uf) {
       const requestSignal = AbortSignal.any([signal, AbortSignal.timeout(6000)]);
@@ -39,14 +39,16 @@ export function createElectionService({ fetcher = fetch, now = Date.now } = {}) 
     }
 
     for (let offset = 0; offset < codes.length; offset += 4) {
-      await Promise.all(codes.slice(offset, offset + 4).map(async uf => {
-        try {
-          await loadScope(uf);
-        } catch (error) {
-          errors.push({ uf, message: error.message });
-        }
-      }));
-      if (signal.aborted || errors.some(error => /HTTP (403|429)/.test(error.message))) {
+      await Promise.all(
+        codes.slice(offset, offset + 4).map(async (uf) => {
+          try {
+            await loadScope(uf);
+          } catch (error) {
+            errors.push({ uf, message: error.message });
+          }
+        }),
+      );
+      if (signal.aborted || errors.some((error) => /HTTP (403|429)/.test(error.message))) {
         for (const uf of codes.slice(offset + 4)) {
           errors.push({ uf, message: 'Consulta interrompida após timeout ou bloqueio do TSE' });
         }
@@ -54,16 +56,18 @@ export function createElectionService({ fetcher = fetch, now = Date.now } = {}) 
       }
     }
 
-    const platformBlocked = errors.some(error => /HTTP (403|429)/.test(error.message));
+    const platformBlocked = errors.some((error) => /HTTP (403|429)/.test(error.message));
     if (!signal.aborted && !platformBlocked && errors.length > 0 && errors.length <= 4) {
-      await Promise.all([...errors].map(async error => {
-        try {
-          await loadScope(error.uf);
-          errors.splice(errors.indexOf(error), 1);
-        } catch (failure) {
-          error.message = failure.message;
-        }
-      }));
+      await Promise.all(
+        [...errors].map(async (error) => {
+          try {
+            await loadScope(error.uf);
+            errors.splice(errors.indexOf(error), 1);
+          } catch (failure) {
+            error.message = failure.message;
+          }
+        }),
+      );
     }
 
     const checkedAt = new Date(now()).toISOString();
@@ -71,8 +75,16 @@ export function createElectionService({ fetcher = fetch, now = Date.now } = {}) 
       return { ...cached, stale: true, errors, attemptedAt: checkedAt };
     }
     if (!national) {
-      return { snapshot: null, forecast: null, history, reference, stale: true, errors,
-        attemptedAt: checkedAt, refreshInterval: REFRESH_INTERVAL };
+      return {
+        snapshot: null,
+        forecast: null,
+        history,
+        reference,
+        stale: true,
+        errors,
+        attemptedAt: checkedAt,
+        refreshInterval: REFRESH_INTERVAL,
+      };
     }
 
     const snapshot = { national, states, checkedAt };
@@ -80,8 +92,14 @@ export function createElectionService({ fetcher = fetch, now = Date.now } = {}) 
     const point = currentPoint(snapshot);
     if (point && errors.length === 0) history = mergeHistory(history, [point]);
     const result = {
-      snapshot, forecast, history, reference, stale: errors.length > 0, errors,
-      attemptedAt: checkedAt, refreshInterval: REFRESH_INTERVAL,
+      snapshot,
+      forecast,
+      history,
+      reference,
+      stale: errors.length > 0,
+      errors,
+      attemptedAt: checkedAt,
+      refreshInterval: REFRESH_INTERVAL,
     };
     if (errors.length === 0) cached = result;
     return result;
@@ -92,8 +110,13 @@ export function createElectionService({ fetcher = fetch, now = Date.now } = {}) 
       if (pending) return pending;
       if (lastResponse && now() - lastAttempt < REFRESH_INTERVAL) return lastResponse;
       pending = collect()
-        .then(result => { lastResponse = result; return result; })
-        .finally(() => { pending = null; });
+        .then((result) => {
+          lastResponse = result;
+          return result;
+        })
+        .finally(() => {
+          pending = null;
+        });
       return pending;
     },
   };

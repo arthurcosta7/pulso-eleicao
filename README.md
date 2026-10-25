@@ -67,3 +67,14 @@ Em cada UF e ZZ, os votos restantes são o número de seções pendentes multipl
 É uma extrapolação experimental, sem validação retrospectiva nem probabilidade de vitória. Perfis diferentes dentro de uma UF, transferência de votos, comparecimento e votos inválidos podem gerar erro. A referência eleitoral é específica de cada UF e do exterior. O ritmo de chegada é observado nos arquivos; nenhuma região tem atraso fixado.
 
 Para atualizar a referência oficial e a malha do IBGE: `npm run refresh-reference`, seguido de novo build.
+
+## Formatação
+
+O projeto usa Prettier com indentação de dois espaços, linhas de até 100 colunas e aspas simples em JavaScript e TypeScript.
+
+```powershell
+npm run format
+npm run format:check
+```
+
+Os comandos cobrem o código da aplicação, estilos, testes e configurações. Dados oficiais, arquivos gerados e a infraestrutura fornecida pelo Sites ficam fora da formatação.
