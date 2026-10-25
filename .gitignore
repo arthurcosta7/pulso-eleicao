@@ -28,10 +28,36 @@ yarn-error.log*
 
 # Local environment and keys
 .env*
+!.env.example
+!.env.sample
+!.env.template
 .dev.vars*
+!.dev.vars.example
 *.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+
+# Credentials and local authentication
+secrets/
+credentials/
+secrets.json
+credentials.json
+service-account*.json
+.npmrc.local
+.ssh/
+.aws/
+.azure/
+.gcloud/
+
+# Logs may contain local paths, tokens, or request details
+*.log
 
 # Checkout-local tool state
+.openai/
+.vercel/
 /.wrangler/
 /.sites-runtime/
 
