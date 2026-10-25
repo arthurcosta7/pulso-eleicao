@@ -406,8 +406,8 @@ export default function ResultsChart({ snapshot, forecast, history = [] }) {
         <p>{`${records.length} registro(s) real(is) coletado(s). ${records.length < 2 ? 'O histórico será formado com as próximas divulgações. ' : ''}A previsão combina o 1º turno de cada UF com sua apuração atual e se adapta a cada atualização.`}</p>
         <span>
           {forecast?.method === 'observed-pace'
-            ? 'Ritmo recente por UF'
-            : 'Ritmo proporcional por UF'}
+            ? `Ritmo de ${forecast.paceIntervals} intervalos por UF`
+            : 'Avanço acumulado por UF'}
         </span>
       </div>
     </section>

@@ -83,9 +83,16 @@ export default function Methodology({ data }) {
             porcentagem de seções totalizadas.
           </li>
           <li>
-            <strong>Linhas tracejadas:</strong> trajetória estimada a partir desse ponto até 100%.
-            Com duas consultas diferentes, o ritmo recente de cada UF orienta a ordem de chegada.
-            Sem esse ritmo, usamos avanço proporcional.
+            <strong>Linhas tracejadas:</strong> trajetória estimada a partir desse ponto até 100%. O
+            ritmo usa até 12 contagens diferentes por UF, com mais peso para as recentes. Uma
+            consulta sem urnas novas preserva as medições anteriores. Sem histórico suficiente,
+            usamos as diferenças de avanço já observadas entre as UFs.
+          </li>
+          <li>
+            <strong>Entrada gradual:</strong> cada UF tem uma taxa estimada de chegada de suas
+            seções pendentes. A velocidade diminui à medida que restam menos seções nessa UF. A
+            combinação dessas chegadas muda a inclinação da curva e pode mudar sua direção. A
+            trajetória é recalculada com novas urnas; a ordem futura não é conhecida com certeza.
           </li>
           <li>
             <strong>Sem histórico inventado:</strong> períodos anteriores à coleta não são

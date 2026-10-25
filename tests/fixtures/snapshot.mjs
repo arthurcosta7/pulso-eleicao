@@ -40,6 +40,6 @@ export function snapshotFixture(
       time: '18:00:00',
       final: progress === 1,
     },
-    checkedAt: '2026-10-25T21:00:00Z',
+    checkedAt: new Date(Date.parse('2026-10-25T20:00:00Z') + progress * 3_600_000).toISOString(),
   };
 }

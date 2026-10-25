@@ -131,3 +131,22 @@ test('A transient failure is retried after collecting the other UFs', async () =
   assert.equal(visited.length, 30);
   assert.equal(visited.at(-1), 'mg');
 });
+
+test('An unchanged successful poll does not discard previously measured UF arrival rates', async () => {
+  let currentTime = 0;
+  let counted = 10;
+  const service = createElectionService({
+    now: () => currentTime,
+    fetcher: async (url) =>
+      Response.json({ ...fixture(url), s: { ts: '20', st: String(counted) } }),
+  });
+  await service.get();
+  currentTime += REFRESH_INTERVAL;
+  counted = 12;
+  const moving = await service.get();
+  assert.equal(moving.forecast.method, 'observed-pace');
+  currentTime += REFRESH_INTERVAL;
+  const idle = await service.get();
+  assert.equal(idle.forecast.method, 'observed-pace');
+  assert.equal(idle.forecast.paceIntervals, moving.forecast.paceIntervals);
+});

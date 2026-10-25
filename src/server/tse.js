@@ -1,6 +1,6 @@
 import reference from '../../data/reference.json' with { type: 'json' };
 import { normalize, STATES } from '../lib/model.js';
-import { buildForecast, currentPoint, mergeHistory } from '../lib/forecast.js';
+import { appendPaceSample, buildForecast, currentPoint, mergeHistory } from '../lib/forecast.js';
 
 export const REFRESH_INTERVAL = 60_000;
 const ORIGIN = 'https://resultados.tse.jus.br/oficial/ele2026/6258/dados';
@@ -15,6 +15,7 @@ export function createElectionService({ fetcher = fetch, now = Date.now } = {}) 
   let lastAttempt = -Infinity;
   let pending = null;
   let history = [];
+  let paceHistory = [];
   let lastResponse = null;
 
   async function collect() {
@@ -88,7 +89,8 @@ export function createElectionService({ fetcher = fetch, now = Date.now } = {}) 
     }
 
     const snapshot = { national, states, checkedAt };
-    const forecast = buildForecast(snapshot, reference.states, { previous: cached?.snapshot });
+    const paceSamples = errors.length ? paceHistory : appendPaceSample(paceHistory, snapshot);
+    const forecast = buildForecast(snapshot, reference.states, { paceSamples });
     const point = currentPoint(snapshot);
     if (point && errors.length === 0) history = mergeHistory(history, [point]);
     const result = {
@@ -101,7 +103,10 @@ export function createElectionService({ fetcher = fetch, now = Date.now } = {}) 
       attemptedAt: checkedAt,
       refreshInterval: REFRESH_INTERVAL,
     };
-    if (errors.length === 0) cached = result;
+    if (errors.length === 0) {
+      cached = result;
+      paceHistory = paceSamples;
+    }
     return result;
   }
 

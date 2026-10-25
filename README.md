@@ -56,7 +56,9 @@ Uma falha mantém o retrato completo anterior e sinaliza sua idade. Sem votos ou
 
 A previsão começa exatamente nos votos nacionais atuais e acrescenta apenas votos ainda esperados por UF. O ponto final, o número previsto e as linhas usam a mesma conta. Com 100% totalizado, previsão e situação atual coincidem.
 
-Com duas consultas diferentes, a distribuição de chegada usa o ritmo observado por UF, misturado com uma parcela proporcional para não descartar regiões temporariamente paradas. Sem essa informação, usa avanço proporcional. Isso é um cenário de ordem de chegada, não uma faixa de confiança.
+A trajetória usa até 12 contagens distintas por UF. Taxas de chegada são estimadas com diferenças de seções e tempo entre essas contagens, com maior peso para as recentes. Consultas sem novas seções não apagam esse histórico. Na ausência de medições suficientes, o avanço acumulado de cada UF fornece uma estimativa inicial de velocidade, com suavização nacional para incluir UFs ainda sem seções contadas. A confiança no ritmo medido cresce com o volume observado e cai gradualmente quando as medições envelhecem.
+
+Em cada UF, a fração prevista das seções restantes que já terão chegado segue 1 - exp(-taxa × tempo projetado). O modelo resolve a combinação das 28 abrangências para cada posição do eixo de apuração. Isso gera mudanças graduais de composição regional, sem conectar o placar ao ponto final por uma reta. A curva tem 120 passos, mais densos próximos ao ponto atual. É uma hipótese de dinâmica da contagem, sem ordem exata garantida ou faixa de confiança.
 
 O histórico é mantido em memória pelo processo do servidor (até 720 registros) e salvo neste navegador. Reinícios ou troca de instância podem reiniciar o histórico do servidor. Períodos anteriores à coleta não são inventados; não existe uma coleta contínua em segundo plano quando não há visitantes.
 
