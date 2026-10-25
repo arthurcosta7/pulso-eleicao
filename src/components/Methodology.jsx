@@ -55,15 +55,30 @@ export default function Methodology({ data }) {
             no segundo conforme a apuração avança.
           </p>
           <p>
-            A preferência nas urnas restantes combina o resultado atual da UF com a proporção Lula /
-            (Lula + Flávio) do primeiro turno. O peso do resultado atual é p / (p + 0,05), sendo p a
-            fração das seções totalizadas.
+            Em cada UF já apurada, medimos a mudança de participação entre os turnos: participação
+            atual menos Lula / (Lula + Flávio) do primeiro turno. Assim, uma região que já era
+            favorável a um candidato não é confundida com uma mudança nacional só por ter apurado
+            antes.
+          </p>
+          <p>
+            UFs ainda pouco apuradas recebem a mudança observada nas outras UFs da mesma região,
+            suavizada pela cobertura. Quando esse sinal é escasso, usamos um sinal nacional reduzido
+            conforme a diversidade de regiões com dados. A própria UF fica fora desses cálculos para
+            não contar sua informação duas vezes. O exterior não transfere sua mudança para o
+            eleitorado doméstico, nem recebe essa transferência.
+          </p>
+          <p>
+            A referência ajustada é combinada com a contagem local. O peso local é p / (p + 0,05 ×
+            (1 − p)), sendo p a fração de seções totalizadas. Ele aumenta com a apuração e chega a
+            100% quando a UF termina. O primeiro turno fornece a estrutura territorial, mas não fixa
+            a participação nem o vencedor previsto do segundo turno.
           </p>
           <p>
             Por exemplo, uma UF historicamente favorável a um candidato continua contribuindo para a
             previsão enquanto tem muitas seções pendentes. À medida que suas urnas chegam, os votos
-            reais substituem a estimativa. Não presumimos que a vantagem de nenhum candidato
-            obrigatoriamente cairá.
+            reais substituem a estimativa. O compartilhamento de mudanças entre UFs é uma hipótese
+            do modelo: pode falhar se os municípios já apurados tiverem perfis diferentes dos
+            pendentes. Não presumimos que a vantagem de nenhum candidato obrigatoriamente cairá.
           </p>
           <p>
             A projeção final adiciona somente os votos ainda esperados ao placar nacional atual.

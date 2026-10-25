@@ -75,7 +75,42 @@ export function normalize(data) {
   return result;
 }
 
-/** Pure per-UF estimate. Official national anchoring is handled in forecast.js. */
+function observedShift(rows) {
+  const electorate = rows.reduce((total, row) => total + row.referenceValid, 0);
+  let weight = 0;
+  let weightedShift = 0;
+  const regions = new Set();
+  for (const row of rows) {
+    if (row.observedShare === null) continue;
+    const evidence = row.referenceValid * row.credibility;
+    weight += evidence;
+    weightedShift += evidence * (row.observedShare - row.prior);
+    if (evidence > 0) regions.add(row.region);
+  }
+  const coverage = electorate ? weight / electorate : 0;
+  return {
+    shift: weight ? weightedShift / weight : 0,
+    strength: coverage / (coverage + 0.05),
+    regions: regions.size,
+  };
+}
+
+/**
+ * Transfer only changes measured within the same UF between rounds.
+ * Leave the target UF out of the pool so its evidence is not counted twice.
+ * Exterior has its own electorate and does not supply a domestic swing.
+ */
+function adjustedReference(row, rows) {
+  if (row.uf === 'ZZ') return { share: row.prior, shift: 0 };
+  const others = rows.filter((other) => other.uf !== row.uf && other.uf !== 'ZZ');
+  const national = observedShift(others);
+  const regional = observedShift(others.filter((other) => other.region === row.region));
+  const nationalShift = (national.shift * national.strength * national.regions) / 5;
+  const shift = regional.strength * regional.shift + (1 - regional.strength) * nationalShift;
+  return { share: Math.max(0, Math.min(1, row.prior + shift)), shift };
+}
+
+/** Pure adaptive UF estimate. National anchoring is handled in forecast.js. */
 export function project(states, reference) {
   let lula = 0;
   let flavio = 0;
@@ -96,7 +131,7 @@ export function project(states, reference) {
     const votes = current.lula + current.flavio;
     const baselinePair = baseline.lula + baseline.flavio;
     const prior = baselinePair ? baseline.lula / baselinePair : 0.5;
-    const credibility = progress / (progress + 0.05);
+    const credibility = progress / (progress + 0.05 * (1 - progress));
     const historicalVotesPerSection = baseline.sections ? baseline.valid / baseline.sections : 0;
     const observedVotesPerSection = current.counted
       ? votes / current.counted
@@ -104,29 +139,37 @@ export function project(states, reference) {
     const expectedVotesPerSection =
       credibility * observedVotesPerSection + (1 - credibility) * historicalVotesPerSection;
     const rest = Math.max(0, (current.sections - current.counted) * expectedVotesPerSection);
-    const share = votes ? (credibility * current.lula) / votes + (1 - credibility) * prior : prior;
-    const estimatedLula = current.lula + rest * share;
-    const estimatedFlavio = current.flavio + rest * (1 - share);
-
-    lula += estimatedLula;
-    flavio += estimatedFlavio;
-    remaining += rest;
-    observed += votes;
     rows.push({
       ...info,
       ...current,
       progress,
       remaining: rest,
-      estimatedLula,
-      estimatedFlavio,
-      share,
       prior,
       credibility,
+      observedShare: votes ? current.lula / votes : null,
       referenceLula: baseline.lula,
       referenceFlavio: baseline.flavio,
+      referenceValid: baseline.valid,
     });
   }
 
+  for (const row of rows) {
+    const adjusted = adjustedReference(row, rows);
+    row.adjustedPrior = adjusted.share;
+    row.learnedShift = adjusted.shift;
+    row.share =
+      row.observedShare === null
+        ? adjusted.share
+        : row.credibility * row.observedShare + (1 - row.credibility) * adjusted.share;
+    row.estimatedLula = row.lula + row.remaining * row.share;
+    row.estimatedFlavio = row.flavio + row.remaining * (1 - row.share);
+    lula += row.estimatedLula;
+    flavio += row.estimatedFlavio;
+    remaining += row.remaining;
+    observed += row.lula + row.flavio;
+  }
+
+  const withVotes = rows.filter((row) => row.observedShare !== null);
   return {
     lula,
     flavio,
@@ -136,6 +179,14 @@ export function project(states, reference) {
     rows,
     share: lula + flavio ? lula / (lula + flavio) : null,
     available: unknown === 0 && observed > 0,
+    learning: {
+      areasWithVotes: withVotes.length,
+      areas: STATES.length,
+      domesticRegionsWithVotes: new Set(
+        withVotes.filter((row) => row.uf !== 'ZZ').map((row) => row.region),
+      ).size,
+      domesticRegions: 5,
+    },
   };
 }
 

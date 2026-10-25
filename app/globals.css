@@ -1635,3 +1635,20 @@ tbody tr:hover {
   color: #8994ae;
   font-size: 10px;
 }
+
+.forecast-learning {
+  margin: 0 27px 17px;
+  padding: 10px 13px;
+  border-radius: 6px;
+  background: #f2f5fa;
+  color: #7a8da9;
+  font-size: 11px;
+  line-height: 1.8;
+}
+
+@media (max-width: 540px) {
+  .forecast-learning {
+    margin-inline: 16px;
+    font-size: 10px;
+  }
+}

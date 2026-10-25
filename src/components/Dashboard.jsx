@@ -98,8 +98,9 @@ function Reading({ data, onMethod }) {
           </div>
           <p>
             O modelo estima <strong>{compact(forecast.remaining)} votos restantes</strong>. A
-            preferência de cada UF combina seu primeiro turno real com os votos que estão chegando
-            agora.
+            preferência nas urnas restantes aprende a mudança entre os turnos dentro de cada UF.
+            Localidades pouco apuradas recebem um ajuste regional conforme a cobertura dos dados
+            atuais, e o peso da referência inicial diminui com a contagem.
           </p>
           <div className="decomposition">
             <div>

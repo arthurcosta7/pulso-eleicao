@@ -1,6 +1,6 @@
 import { project } from './model.js';
 
-export const MODEL_VERSION = 'regional-arrivals-v4';
+export const MODEL_VERSION = 'learned-regional-shift-v5';
 const FORECAST_STEPS = 120;
 const PACE_WINDOW = 12;
 

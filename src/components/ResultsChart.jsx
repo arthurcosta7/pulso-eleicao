@@ -117,7 +117,7 @@ export default function ResultsChart({ snapshot, forecast, history = [] }) {
         ? 'Apuração concluída'
         : !forecast?.available
           ? 'Placar atual · previsão indisponível nesta consulta'
-          : 'Placar atual + previsão até 100%';
+          : 'Placar observado e projeção em atualização';
 
   return (
     <section className="chart-panel panel" aria-label="Situação atual e previsão no mesmo gráfico">
@@ -171,7 +171,7 @@ export default function ResultsChart({ snapshot, forecast, history = [] }) {
               </div>
               <ArrowRight className="journey-arrow" size={22} />
               <div>
-                <span>{now?.progress >= 100 ? 'Resultado apurado' : 'Previsão final'}</span>
+                <span>{now?.progress >= 100 ? 'Resultado apurado' : 'Projeção ao final'}</span>
                 <strong className="forecast-number">
                   {final ? percent(candidateValue(final, candidate.key, 'percent')) : '—'}
                 </strong>
@@ -185,6 +185,16 @@ export default function ResultsChart({ snapshot, forecast, history = [] }) {
           </div>
         ))}
       </div>
+
+      {forecast?.available && now?.progress < 100 && forecast.learning && (
+        <p className="forecast-learning">
+          Sinal do 2º turno em {forecast.learning.areasWithVotes}/{forecast.learning.areas}{' '}
+          abrangências
+          {' e '}
+          {forecast.learning.domesticRegionsWithVotes}/{forecast.learning.domesticRegions} regiões
+          brasileiras. Estimativa em atualização, sem declaração de vencedor.
+        </p>
+      )}
 
       <div className="chart-legend">
         {CANDIDATES.map((candidate) => (

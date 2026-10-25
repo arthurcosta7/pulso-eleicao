@@ -122,3 +122,82 @@ test('The first-round reference covers every UF and the exterior with official s
     assert.ok(state.source.startsWith('https://resultados.tse.jus.br/oficial/ele2026/6257/'));
   }
 });
+
+test('The same first-round reference permits either projected winner as second-round votes change', () => {
+  const positive = {};
+  const negative = {};
+  for (const [uf, baseline] of Object.entries(reference)) {
+    const prior = baseline.lula / (baseline.lula + baseline.flavio);
+    positive[uf] = Math.min(0.99, prior + 0.08);
+    negative[uf] = Math.max(0.01, prior - 0.08);
+  }
+  const towardLula = project(
+    snapshotFixture(reference, 0.05, { shares: positive }).states,
+    reference,
+  );
+  const towardFlavio = project(
+    snapshotFixture(reference, 0.05, { shares: negative }).states,
+    reference,
+  );
+  assert.ok(towardLula.share > 0.5);
+  assert.ok(towardFlavio.share < 0.5);
+});
+
+test('A measured shift in other UFs updates an uncounted UF without inventing observed votes', () => {
+  const shares = Object.fromEntries(
+    Object.entries(reference).map(([uf, baseline]) => [
+      uf,
+      Math.min(0.99, baseline.lula / (baseline.lula + baseline.flavio) + 0.1),
+    ]),
+  );
+  const snapshot = snapshotFixture(reference, 0.15, { shares });
+  Object.assign(snapshot.states.SP, { lula: 0, flavio: 0, valid: 0, counted: 0 });
+  const result = project(snapshot.states, reference);
+  const sp = result.rows.find((row) => row.uf === 'SP');
+  assert.equal(sp.lula, 0);
+  assert.equal(sp.flavio, 0);
+  assert.equal(sp.credibility, 0);
+  assert.ok(sp.share > sp.prior + 0.05);
+  assert.ok(sp.learnedShift > 0);
+});
+
+test('A raw lead caused only by more counting in a favorable region is not learned as a national swing', () => {
+  const snapshot = snapshotFixture(reference, 0, { regionProgress: { Nordeste: 0.8 } });
+  const result = project(snapshot.states, reference);
+  const sp = result.rows.find((row) => row.uf === 'SP');
+  assert.ok(Math.abs(sp.learnedShift) < 0.00001);
+  assert.ok(Math.abs(sp.share - sp.prior) < 0.00001);
+});
+
+test('Exterior results do not transfer a voting shift into uncounted domestic UFs', () => {
+  const snapshot = snapshotFixture(reference, 0);
+  Object.assign(snapshot.states.ZZ, { lula: 900, flavio: 100, valid: 1000, counted: 500 });
+  const result = project(snapshot.states, reference);
+  for (const row of result.rows.filter((item) => item.uf !== 'ZZ')) {
+    assert.equal(row.learnedShift, 0);
+    assert.equal(row.share, row.prior);
+  }
+});
+
+test('Swapping candidate labels produces exactly complementary projections', () => {
+  const snapshot = snapshotFixture(reference, 0.15, { shares: { BA: 0.8, SP: 0.55, RS: 0.6 } });
+  const result = project(snapshot.states, reference);
+  const swap = (input) =>
+    Object.fromEntries(
+      Object.entries(input).map(([uf, state]) => [
+        uf,
+        { ...state, lula: state.flavio, flavio: state.lula },
+      ]),
+    );
+  const reversed = project(swap(snapshot.states), swap(reference));
+  assert.ok(Math.abs(result.lula - reversed.flavio) < 0.00001);
+  assert.ok(Math.abs(result.flavio - reversed.lula) < 0.00001);
+});
+
+test('Local data eventually removes all historical preference weight', () => {
+  const result = project(snapshotFixture(reference, 1, { shares: { SP: 0.8 } }).states, reference);
+  const sp = result.rows.find((row) => row.uf === 'SP');
+  assert.equal(sp.credibility, 1);
+  assert.equal(sp.share, sp.observedShare);
+  assert.equal(sp.remaining, 0);
+});

@@ -64,7 +64,11 @@ O histórico é mantido em memória pelo processo do servidor (até 720 registro
 
 ## Modelo e limites
 
-Em cada UF e ZZ, os votos restantes são o número de seções pendentes multiplicado pela média esperada de votos válidos por seção. A média combina o primeiro turno real e o segundo turno já observado. A preferência combina Lula / (Lula + Flávio) do primeiro turno com a proporção observada na própria UF. Ambas usam peso p / (p + 0,05) para a observação atual. Assim, o modelo aprende tanto a preferência quanto o volume de votos por seção conforme a contagem avança.
+Em cada UF e ZZ, os votos restantes são o número de seções pendentes multiplicado pela média esperada de votos válidos por seção. A média combina o primeiro turno real e o segundo turno já observado. A preferência inicial Lula / (Lula + Flávio) do primeiro turno é ajustada pela mudança observada entre turnos nas outras UFs. O sinal da mesma região tem prioridade e é suavizado pela cobertura; o sinal nacional é reduzido conforme a diversidade de regiões com dados. Cada UF fica fora do cálculo de seu próprio sinal compartilhado, evitando duplicar a evidência. O exterior não transfere nem recebe mudanças do eleitorado doméstico.
+
+A preferência ajustada e a proporção local atual são combinadas com peso local p / (p + 0,05 × (1 − p)). O peso chega a 1 com 100% da UF apurada. A mesma regra atualiza a média de votos por seção. Com isso, UFs sem apuração já podem incorporar uma mudança do segundo turno, enquanto UFs bem apuradas passam a depender da própria contagem. A referência inicial não fixa o vencedor.
+
+A cobertura de votos do segundo turno é exibida no gráfico. O modelo não declara vencedor nem calcula probabilidade de vitória. O compartilhamento regional de mudanças é uma hipótese não validada; municípios que chegam primeiro podem diferir daqueles ainda pendentes.
 
 É uma extrapolação experimental, sem validação retrospectiva nem probabilidade de vitória. Perfis diferentes dentro de uma UF, transferência de votos, comparecimento e votos inválidos podem gerar erro. A referência eleitoral é específica de cada UF e do exterior. O ritmo de chegada é observado nos arquivos; nenhuma região tem atraso fixado.
 
