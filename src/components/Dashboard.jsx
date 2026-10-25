@@ -130,11 +130,15 @@ function Reading({ data, onMethod }) {
         <>
           <div className="waiting-reading">
             <Activity size={25} />
-            <h3>A previsão depende de votos reais.</h3>
+            <h3>
+              {n?.valid
+                ? 'Cobertura ainda insuficiente para projetar.'
+                : 'Aguardando os primeiros votos.'}
+            </h3>
           </div>
           <p>
-            Quando houver votos divulgados e os arquivos das 28 abrangências estiverem disponíveis,
-            o modelo estimará o efeito das urnas restantes.
+            A projeção aguarda volume mínimo, presença das cinco regiões e consistência entre o
+            total Brasil e a soma das UFs. O placar oficial continua visível durante essa espera.
           </p>
           <p>
             A ordem de chegada varia. Uma vantagem inicial pode diminuir, aumentar ou permanecer.

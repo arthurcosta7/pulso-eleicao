@@ -1652,3 +1652,41 @@ tbody tr:hover {
     font-size: 10px;
   }
 }
+
+.forecast-readiness {
+  margin: 0 27px 20px;
+  padding: 16px 18px;
+  border: 1px solid #e0e7f2;
+  border-radius: 7px;
+  background: #f5f7fb;
+  color: #70839f;
+  font-size: 11px;
+  line-height: 1.8;
+}
+
+.forecast-readiness > strong {
+  display: block;
+  color: #597197;
+  font-size: 13px;
+}
+
+.forecast-readiness > p {
+  margin-top: 4px;
+}
+.forecast-readiness > ul {
+  margin: 9px 0;
+  padding-left: 17px;
+}
+.forecast-readiness > small {
+  display: block;
+  color: #97a3b7;
+  font-size: 10px;
+}
+
+@media (max-width: 540px) {
+  .forecast-readiness {
+    margin-inline: 16px;
+    padding: 13px;
+    font-size: 10px;
+  }
+}

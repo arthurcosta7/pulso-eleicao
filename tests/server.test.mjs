@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { createElectionService, REFRESH_INTERVAL } from '../src/server/tse.js';
 
 function fixture(uf) {
+  const multiplier = String(uf).includes('/br/') ? 28 : 1;
   return {
     ele: '6258',
     t: '2',
@@ -17,8 +18,8 @@ function fixture(uf) {
             par: [
               {
                 cand: [
-                  { n: '13', vap: '60' },
-                  { n: '22', vap: '40' },
+                  { n: '13', vap: String(60 * multiplier) },
+                  { n: '22', vap: String(40 * multiplier) },
                 ],
               },
             ],
@@ -26,9 +27,9 @@ function fixture(uf) {
         ],
       },
     ],
-    s: { ts: '20', st: '10' },
-    v: { vv: '100' },
-    e: { te: '1000' },
+    s: { ts: String(20 * multiplier), st: String(10 * multiplier) },
+    v: { vv: String(100 * multiplier) },
+    e: { te: String(1000 * multiplier) },
   };
 }
 
@@ -137,8 +138,16 @@ test('An unchanged successful poll does not discard previously measured UF arriv
   let counted = 10;
   const service = createElectionService({
     now: () => currentTime,
-    fetcher: async (url) =>
-      Response.json({ ...fixture(url), s: { ts: '20', st: String(counted) } }),
+    fetcher: async (url) => {
+      const multiplier = url.includes('/br/') ? 28 : 1;
+      return Response.json({
+        ...fixture(url),
+        s: {
+          ts: String(20 * multiplier),
+          st: String(counted * multiplier),
+        },
+      });
+    },
   });
   await service.get();
   currentTime += REFRESH_INTERVAL;

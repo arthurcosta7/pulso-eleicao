@@ -116,7 +116,7 @@ export default function ResultsChart({ snapshot, forecast, history = [] }) {
       : now.progress >= 100
         ? 'Apuração concluída'
         : !forecast?.available
-          ? 'Placar atual · previsão indisponível nesta consulta'
+          ? 'Placar atual · dados insuficientes para projetar o resultado'
           : 'Placar observado e projeção em atualização';
 
   return (
@@ -178,13 +178,34 @@ export default function ResultsChart({ snapshot, forecast, history = [] }) {
                 <small>
                   {final
                     ? `${compact(final[candidate.key])} votos estimados`
-                    : 'Depende da chegada de votos'}
+                    : now
+                      ? 'Aguardando cobertura suficiente'
+                      : 'Depende da chegada de votos'}
                 </small>
               </div>
             </div>
           </div>
         ))}
       </div>
+
+      {now && !forecast?.available && forecast?.readiness && (
+        <div className="forecast-readiness" role="status">
+          <strong>Dados insuficientes para projetar o resultado final</strong>
+          <p>
+            O placar continua sendo atualizado. A previsão aguarda mais cobertura e dados
+            consistentes.
+          </p>
+          <ul>
+            {forecast.readiness.reasons.map((reason) => (
+              <li key={reason}>{reason}</li>
+            ))}
+          </ul>
+          <small>
+            Critérios conservadores de publicação; não equivalem a confiança estatística nem
+            garantem acerto.
+          </small>
+        </div>
+      )}
 
       {forecast?.available && now?.progress < 100 && forecast.learning && (
         <p className="forecast-learning">
@@ -212,10 +233,12 @@ export default function ResultsChart({ snapshot, forecast, history = [] }) {
           <b className="line-key" />
           Apurado
         </span>
-        <span>
-          <b className="line-key dashed" />
-          Previsão
-        </span>
+        {forecast?.available && (
+          <span>
+            <b className="line-key dashed" />
+            Previsão
+          </span>
+        )}
       </div>
 
       <div className="plot-container" ref={containerRef}>
@@ -224,7 +247,11 @@ export default function ResultsChart({ snapshot, forecast, history = [] }) {
           className={`results-chart ${compactChart ? 'compact-chart' : ''}`}
           role="img"
           tabIndex={0}
-          aria-label="Curvas de Lula e Flávio por percentual de seções apuradas. Linhas contínuas: observado. Tracejadas: previsão. Use as setas para consultar pontos."
+          aria-label={
+            forecast?.available
+              ? 'Curvas de Lula e Flávio por percentual de seções apuradas. Linhas contínuas: observado. Tracejadas: previsão. Use as setas para consultar pontos.'
+              : 'Placar real de Lula e Flávio por percentual de seções apuradas. A projeção aguarda cobertura suficiente. Use as setas para consultar os pontos observados.'
+          }
           onPointerMove={onPointerMove}
           onPointerLeave={() => setFocusIndex(null)}
           onKeyDown={onKeyDown}
@@ -245,7 +272,9 @@ export default function ResultsChart({ snapshot, forecast, history = [] }) {
             {now
               ? now.progress >= 100
                 ? 'Apuração concluída'
-                : 'Urnas restantes · projeção'
+                : forecast?.available
+                  ? 'Urnas restantes · projeção'
+                  : 'Projeção aguardando cobertura'
               : 'Aguardando totalização'}
           </text>
 
@@ -375,9 +404,7 @@ export default function ResultsChart({ snapshot, forecast, history = [] }) {
           <div className="chart-empty">
             <span className="empty-dot" />
             <h3>O gráfico começa com os primeiros votos.</h3>
-            <p>
-              O placar atual e a previsão aparecerão juntos assim que o TSE divulgar a apuração.
-            </p>
+            <p>O placar aparece com os votos oficiais. A previsão aguarda cobertura suficiente.</p>
           </div>
         )}
 
@@ -413,12 +440,14 @@ export default function ResultsChart({ snapshot, forecast, history = [] }) {
 
       <div className="chart-bottom">
         <Info size={15} />
-        <p>{`${records.length} registro(s) real(is) coletado(s). ${records.length < 2 ? 'O histórico será formado com as próximas divulgações. ' : ''}A previsão combina o 1º turno de cada UF com sua apuração atual e se adapta a cada atualização.`}</p>
-        <span>
-          {forecast?.method === 'observed-pace'
-            ? `Ritmo de ${forecast.paceIntervals} intervalos por UF`
-            : 'Avanço acumulado por UF'}
-        </span>
+        <p>{`${records.length} registro(s) real(is) coletado(s). ${records.length < 2 ? 'O histórico será formado com as próximas divulgações. ' : ''}${forecast?.available ? 'A previsão é experimental e se adapta à apuração; critérios de cobertura não garantem acerto.' : 'Apenas votos apurados são desenhados enquanto faltam condições para publicar uma projeção.'}`}</p>
+        {forecast?.available && (
+          <span>
+            {forecast?.method === 'observed-pace'
+              ? `Ritmo de ${forecast.paceIntervals} intervalos por UF`
+              : 'Avanço acumulado por UF'}
+          </span>
+        )}
       </div>
     </section>
   );

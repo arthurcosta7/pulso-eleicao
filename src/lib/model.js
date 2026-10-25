@@ -82,7 +82,9 @@ function observedShift(rows) {
   const regions = new Set();
   for (const row of rows) {
     if (row.observedShare === null) continue;
-    const evidence = row.referenceValid * row.credibility;
+    // Pool only ballots actually observed. Local shrinkage weight is not
+    // geographic coverage and must not turn a tiny sample into a large electorate.
+    const evidence = Math.min(row.referenceValid, row.lula + row.flavio);
     weight += evidence;
     weightedShift += evidence * (row.observedShare - row.prior);
     if (evidence > 0) regions.add(row.region);

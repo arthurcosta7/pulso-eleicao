@@ -84,3 +84,18 @@ npm run format:check
 ```
 
 Os comandos cobrem o código da aplicação, estilos, testes e configurações. Dados oficiais, arquivos gerados e a infraestrutura fornecida pelo Sites ficam fora da formatação.
+
+## Controle de publicação da projeção
+
+A implementação continua experimental e não possui validação retrospectiva de acurácia. O gráfico publica apenas votos observados enquanto não houver cobertura mínima e consistência das fontes. Os critérios operacionais estão em `src/lib/readiness.js`:
+
+- Pelo menos 5% das seções totalizadas no Brasil.
+- Pelo menos 1% em cada uma das cinco regiões brasileiras.
+- UFs com 1% ou mais apurado representando 80% dos votos válidos do primeiro turno.
+- Todas as abrangências necessárias e diferença de até 2% entre total Brasil e soma das UFs.
+
+Esses limites são travas conservadoras escolhidas para o projeto, não um nível estatístico de confiança. Passar nelas não comprova representatividade dos municípios e seções pendentes nem garante acerto. Sem elas, a API retorna `available: false`, `final: null`, `share: null` e curva vazia, mantendo o ponto atual e os motivos do bloqueio. Não são divulgados percentuais finais como se fossem confiáveis com 0,25% de apuração.
+
+O sinal entre UFs agora usa somente votos efetivamente observados como peso de evidência, limitado pelo volume de referência. O peso de suavização local não substitui a fração real de votos recebidos. Isso corrige a amplificação de amostras iniciais pequenas ao transferir mudanças para outras UFs.
+
+Referência técnica de contexto, sem adoção de seus limiares ou alegação de validação equivalente: [Election Night Forecasting With DDHQ, HDSR 2024](https://hdsr.mitpress.mit.edu/pub/zr6hjsfl/release/1).

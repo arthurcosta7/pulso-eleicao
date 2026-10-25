@@ -10,6 +10,10 @@ const SOURCES = [
     'https://www.tse.jus.br/eleicoes/informacoes-tecnicas-sobre-a-divulgacao-de-resultados',
   ],
   ['Malhas territoriais · IBGE', 'https://servicodados.ibge.gov.br/api/docs/malhas?versao=3'],
+  [
+    'Previsões durante a apuração · HDSR 2024',
+    'https://hdsr.mitpress.mit.edu/pub/zr6hjsfl/release/1',
+  ],
 ];
 
 export default function Methodology({ data }) {
@@ -86,6 +90,33 @@ export default function Methodology({ data }) {
           </p>
         </section>
       </div>
+      <section className="panel method-block">
+        <h3>Quando publicamos uma projeção</h3>
+        <p>Antes de mostrar percentuais finais e a curva prevista, esta versão exige:</p>
+        <ul>
+          <li>Pelo menos 5% das seções totalizadas no Brasil.</li>
+          <li>Pelo menos 1% das seções de cada uma das cinco regiões brasileiras.</li>
+          <li>
+            UFs com 1% ou mais apurado somando pelo menos 80% dos votos válidos do primeiro turno.
+          </li>
+          <li>
+            Todos os arquivos necessários disponíveis e diferença de até 2% entre Brasil e soma das
+            UFs.
+          </li>
+        </ul>
+        <p>
+          São critérios operacionais conservadores deste projeto, não limiares científicos de
+          confiança. Atingi-los não garante representatividade dentro de cada UF nem acerto
+          eleitoral. Enquanto algum falha, o placar oficial e o histórico continuam visíveis, com a
+          indicação “dados insuficientes”, sem percentual final projetado.
+        </p>
+        <p>
+          O sinal compartilhado entre UFs é ponderado por votos efetivamente recebidos. O peso usado
+          para suavizar uma preferência local não é tratado como se fosse cobertura real de milhões
+          de eleitores. Esta implementação ainda não foi validada retrospectivamente e não fornece
+          intervalo estatístico de confiança nem probabilidade de vitória.
+        </p>
+      </section>
       <section className="panel method-block">
         <h3>Como ler o gráfico completo</h3>
         <ul>

@@ -1,6 +1,7 @@
 import { project } from './model.js';
+import { assessReadiness } from './readiness.js';
 
-export const MODEL_VERSION = 'learned-regional-shift-v5';
+export const MODEL_VERSION = 'coverage-guarded-v6';
 const FORECAST_STEPS = 120;
 const PACE_WINDOW = 12;
 
@@ -140,6 +141,7 @@ function completionAt(rows, rates, target) {
 export function buildForecast(snapshot, reference, options = {}) {
   const estimate = project(snapshot.states, reference);
   const now = currentPoint(snapshot);
+  const readiness = assessReadiness(snapshot, estimate);
   const base = {
     ...estimate,
     version: MODEL_VERSION,
@@ -147,7 +149,13 @@ export function buildForecast(snapshot, reference, options = {}) {
     current: now,
     method: 'cumulative-progress',
     final: null,
-    available: estimate.available && now !== null,
+    lula: null,
+    flavio: null,
+    share: null,
+    readiness,
+    regionalDifference:
+      estimate.observed - (snapshot.national?.lula || 0) - (snapshot.national?.flavio || 0),
+    available: estimate.available && now !== null && readiness.eligible,
   };
   if (!base.available) return base;
 
@@ -183,6 +191,8 @@ export function buildForecast(snapshot, reference, options = {}) {
     ...base,
     points,
     final,
+    lula: final.lula,
+    flavio: final.flavio,
     share: final.lula / final.valid,
     method: pace.intervals ? 'observed-pace' : 'cumulative-progress',
     paceIntervals: pace.intervals,
