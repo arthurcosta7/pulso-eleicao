@@ -70,7 +70,7 @@ export function normalize(data) {
 }
 
 /** Pure per-UF estimate. Official national anchoring is handled in forecast.js. */
-export function project(states, reference, { swing = 0, turnout = 1 } = {}) {
+export function project(states, reference) {
   let lula = 0;
   let flavio = 0;
   let remaining = 0;
@@ -90,13 +90,14 @@ export function project(states, reference, { swing = 0, turnout = 1 } = {}) {
     const votes = current.lula + current.flavio;
     const baselinePair = baseline.lula + baseline.flavio;
     const prior = baselinePair ? baseline.lula / baselinePair : 0.5;
-    const expectedVolume = baseline.sections
-      ? baseline.valid * current.sections / baseline.sections : baseline.valid;
-    const rest = progress >= 1 ? 0 : Math.max(0, expectedVolume * turnout * (1 - progress));
     const credibility = progress / (progress + 0.05);
-    const blendedShare = votes
+    const historicalVotesPerSection = baseline.sections ? baseline.valid / baseline.sections : 0;
+    const observedVotesPerSection = current.counted ? votes / current.counted : historicalVotesPerSection;
+    const expectedVotesPerSection = credibility * observedVotesPerSection
+      + (1 - credibility) * historicalVotesPerSection;
+    const rest = Math.max(0, (current.sections - current.counted) * expectedVotesPerSection);
+    const share = votes
       ? credibility * current.lula / votes + (1 - credibility) * prior : prior;
-    const share = Math.max(0, Math.min(1, blendedShare + swing / 100));
     const estimatedLula = current.lula + rest * share;
     const estimatedFlavio = current.flavio + rest * (1 - share);
 
@@ -106,7 +107,8 @@ export function project(states, reference, { swing = 0, turnout = 1 } = {}) {
     observed += votes;
     rows.push({
       ...info, ...current, progress, remaining: rest,
-      estimatedLula, estimatedFlavio, share, prior,
+      estimatedLula, estimatedFlavio, share, prior, credibility,
+      referenceLula: baseline.lula, referenceFlavio: baseline.flavio,
     });
   }
 
@@ -126,46 +128,9 @@ export function groupRows(rows) {
       lula: sum('lula'), flavio: sum('flavio'),
       sections: sum('sections'), counted: sum('counted'), remaining: sum('remaining'),
       estimatedLula: sum('estimatedLula'), estimatedFlavio: sum('estimatedFlavio'),
+      referenceLula: sum('referenceLula'), referenceFlavio: sum('referenceFlavio'),
+      remainingLula: matching.reduce((total, row) => total + row.remaining * row.share, 0),
+      remainingFlavio: matching.reduce((total, row) => total + row.remaining * (1 - row.share), 0),
     };
   });
 }
-
-/** Fictitious arrivals for the simulator tab; never used by the TSE service. */
-export function demo(reference, progress = 0.58, { northeastDelay = 1.8 } = {}) {
-  const delays = {
-    Norte: 0.88, Nordeste: northeastDelay, 'Centro-Oeste': 0.62,
-    Sudeste: 0.68, Sul: 0.55, Exterior: 0.35,
-  };
-  const states = {};
-
-  for (const state of STATES) {
-    const baseline = reference[state.uf];
-    const fraction = progress >= 1 ? 1 : Math.min(0.999, Math.pow(progress, delays[state.region]));
-    const preference = Math.max(0.02, Math.min(0.98,
-      baseline.lula / (baseline.lula + baseline.flavio) + 0.012));
-    const valid = Math.round(baseline.valid * fraction);
-    const lula = Math.round(valid * preference);
-
-    states[state.uf] = {
-      ...baseline,
-      counted: Math.round(baseline.sections * fraction),
-      lula, flavio: valid - lula, valid, blank: 0, nullVotes: 0,
-      date: 'Cenário fictício', time: '', id: 'demo-' + progress, final: fraction === 1,
-    };
-  }
-
-  const sum = key => Object.values(states).reduce((total, state) => total + state[key], 0);
-  return {
-    states,
-    national: {
-      lula: sum('lula'), flavio: sum('flavio'), valid: sum('valid'),
-      sections: sum('sections'), counted: sum('counted'),
-      blank: 0, nullVotes: 0, date: 'Simulação', time: '',
-      id: 'demo-' + progress, final: progress >= 1,
-    },
-    checkedAt: new Date().toISOString(),
-    errors: [],
-    simulation: true,
-  };
-}
-

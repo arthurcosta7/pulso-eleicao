@@ -3,19 +3,17 @@
 import { useEffect, useState } from 'react';
 import {
   Activity, ArrowUpRight, BarChart3, BookOpen, CheckCheck, Clock3,
-  Download, FlaskConical, Globe2, Info, Map, RefreshCw, TrendingUp,
+  Download, Globe2, Info, Map, RefreshCw, TrendingUp,
 } from 'lucide-react';
 import { useElection } from '../hooks/useElection.js';
 import { clock, compact, number, percent, pp, sourceLabel } from '../lib/format.js';
 import ResultsChart from './ResultsChart';
 import RegionsPanel, { RegionalOverview } from './RegionsPanel';
-import Simulator from './Simulator';
 import Methodology from './Methodology';
 
 const TABS = [
   { id: 'painel', label: 'Visão geral', icon: BarChart3 },
   { id: 'regioes', label: 'Regiões e UFs', icon: Map },
-  { id: 'simulador', label: 'Simulador', icon: FlaskConical },
   { id: 'metodologia', label: 'Metodologia', icon: BookOpen },
 ];
 
@@ -48,7 +46,7 @@ function Reading({ data, onMethod }) {
   return <section className="panel reading-panel"><div className="section-heading"><h2>O que as urnas restantes podem mudar</h2><TrendingUp size={19} /></div>
     {available ? <>
       <div className="adjustment-value">{pp(adjustment)}<span>na participação de Lula, em relação ao placar atual</span></div>
-      <p>O modelo estima <strong>{compact(forecast.remaining)} votos restantes</strong>, distribuídos conforme o peso de cada UF e do exterior.</p>
+      <p>O modelo estima <strong>{compact(forecast.remaining)} votos restantes</strong>. A preferência de cada UF combina seu primeiro turno real com os votos que estão chegando agora.</p>
       <div className="decomposition"><div><span>Já apurado</span><b>{compact(n.valid)}</b></div><span>+</span><div><span>Ainda esperado</span><b>{compact(forecast.remaining)}</b></div><span>=</span><div><span>Total estimado</span><b>{compact(n.valid + forecast.remaining)}</b></div></div>
       {Math.abs(forecast.regionalDifference) > 1000 && <p className="inline-warning">Os arquivos de Brasil e UFs têm horários diferentes. A diferença atual é de {compact(Math.abs(forecast.regionalDifference))} votos. A previsão parte do placar Brasil.</p>}
     </> : <>
@@ -68,7 +66,13 @@ export default function Dashboard() {
   const n = data?.snapshot?.national;
 
   useEffect(() => {
-    const sync = () => setTab(validTab(window.location.hash.slice(1)));
+    const sync = () => {
+      const selected = validTab(window.location.hash.slice(1));
+      setTab(selected);
+      if (window.location.hash && window.location.hash !== `#${selected}`) {
+        window.history.replaceState(null, '', `#${selected}`);
+      }
+    };
     sync();
     window.addEventListener('hashchange', sync);
     window.addEventListener('popstate', sync);
@@ -125,12 +129,12 @@ export default function Dashboard() {
     <div className="tabs" role="tablist" aria-label="Áreas do painel eleitoral">{TABS.map(({ id, label, icon: Icon }, index) => (
       <button key={id} role="tab" id={`tab-${id}`} aria-controls={`panel-${id}`} aria-selected={tab === id}
         tabIndex={tab === id ? 0 : -1} onClick={() => { if (id === 'regioes') setRegion(''); changeTab(id); }} onKeyDown={event => onTabKey(event, index)}>
-        <Icon size={17} />{label}{id === 'simulador' && <span>Fictício</span>}</button>
+        <Icon size={17} />{label}</button>
     ))}</div>
 
     {error && <div className="status-banner error" role="status"><Info size={18} /><div><strong>Não há uma atualização completa nesta consulta.</strong><p>{error} {data?.snapshot?.checkedAt ? `Retrato exibido: ${clock(data.snapshot.checkedAt)}.` : ''}</p></div></div>}
-    {!error && !n?.valid && tab !== 'simulador' && <div className="status-banner" role="status"><Info size={18} /><p>
-      {loading ? 'Buscando os arquivos oficiais das 27 UFs, Brasil e exterior.' : `O TSE ainda não divulgou votos neste retrato. Fonte nacional: ${sourceLabel(n)}. O simulador está disponível em uma aba separada.`}</p></div>}
+    {!error && !n?.valid && <div className="status-banner" role="status"><Info size={18} /><p>
+      {loading ? 'Buscando os arquivos oficiais das 27 UFs, Brasil e exterior.' : `O TSE ainda não divulgou votos neste retrato. Fonte nacional: ${sourceLabel(n)}. A previsão será recalculada automaticamente conforme os votos chegarem.`}</p></div>}
     {exportMessage && <p className="export-message" role="status">{exportMessage}</p>}
 
     <section role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`} tabIndex={0} className="tab-content">
@@ -139,7 +143,6 @@ export default function Dashboard() {
         <div className="below-chart-grid"><RegionalOverview rows={data?.forecast?.rows} onSelect={value => { setRegion(value); changeTab('regioes'); }} />
           <Reading data={data} onMethod={() => changeTab('metodologia')} /></div></>}
       {tab === 'regioes' && <RegionsPanel rows={data?.forecast?.rows} initialRegion={region} />}
-      {tab === 'simulador' && <Simulator reference={data?.reference} />}
       {tab === 'metodologia' && <Methodology data={data} />}
     </section>
 

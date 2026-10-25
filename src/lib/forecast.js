@@ -1,6 +1,6 @@
 import { project } from './model.js';
 
-export const MODEL_VERSION = 'uf-extrapolation-v2';
+export const MODEL_VERSION = 'adaptive-uf-v3';
 
 export function currentPoint(snapshot) {
   const n = snapshot.national;
@@ -33,7 +33,7 @@ function completionAt(rows, weights, target) {
 
 /** Forward paths start at official BR; regional estimates allocate only future votes. */
 export function buildForecast(snapshot, reference, options = {}) {
-  const estimate = project(snapshot.states, reference, options);
+  const estimate = project(snapshot.states, reference);
   const now = currentPoint(snapshot);
   const base = {
     ...estimate, version: MODEL_VERSION, points: [], current: now,

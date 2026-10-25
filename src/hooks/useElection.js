@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { mergeHistory } from '../lib/forecast.js';
+import { mergeHistory, MODEL_VERSION } from '../lib/forecast.js';
 
-const STORAGE_KEY = 'pulso-react-election-6258-v2';
+const STORAGE_KEY = 'pulso-react-election-6258-v3';
 
 export function useElection() {
   const [data, setData] = useState(null);
@@ -46,10 +46,11 @@ export function useElection() {
   useEffect(() => {
     mounted.current = true;
     try {
-      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
+      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY)
+        || localStorage.getItem('pulso-react-election-6258-v2') || 'null');
       if (saved?.snapshot?.national && Array.isArray(saved.history)) {
         historyRef.current = saved.history;
-        setData({ ...saved, stale: true });
+        if (saved.forecast?.version === MODEL_VERSION) setData({ ...saved, stale: true });
       }
     } catch { /* Ignore an invalid local record. */ }
     refresh();

@@ -31,9 +31,8 @@ Produção em Node: http://localhost:3000. `npm start` usa o servidor HTTP de pr
 - `src/components/Dashboard.jsx`: navegação real entre abas, estado da aplicação e exportação JSON.
 - `src/components/ResultsChart.jsx`: curvas observadas e previstas dos dois candidatos, marcador atual, tooltip, teclado, unidades e escala.
 - `src/components/RegionsPanel.jsx`: mapa, filtros, ordenação e tabela de UFs.
-- `src/components/Simulator.jsx`: cenário fictício isolado da apuração oficial.
 - `src/components/Methodology.jsx`: fontes, hipóteses e limites.
-- `src/lib/model.js`: extrapolação por UF e gerador de cenários.
+- `src/lib/model.js`: estimativa adaptativa por UF com referência real do primeiro turno.
 - `src/lib/forecast.js`: trajetória futura ancorada no placar oficial e tratamento do histórico.
 - `data/reference.json`: primeiro turno oficial das 28 abrangências, com URLs e data de coleta.
 - `tests/`: testes do modelo, trajetória, cache, concorrência e tratamento de falhas.
@@ -44,7 +43,7 @@ Os scripts de publicação e o adaptador em `worker/` pertencem ao ambiente Site
 
 O servidor consulta os arquivos EA20 da eleição 6258, cargo Presidente, para BR, 27 UFs e ZZ. Brasil já inclui o exterior; a previsão nunca o soma uma segunda vez. O navegador faz uma única consulta à API do projeto por minuto enquanto a aba está visível. Horários de coleta e divulgação são distintos.
 
-Uma falha mantém o retrato completo anterior e sinaliza sua idade. Sem votos ou sem as 28 abrangências, a curva de previsão é suprimida. Não há substituição automática por dados fictícios.
+Uma falha mantém o retrato completo anterior e sinaliza sua idade. Sem votos ou sem as 28 abrangências, a curva de previsão é suprimida. O painel usa somente a apuração oficial e sua referência histórica real.
 
 ## Gráfico
 
@@ -63,8 +62,8 @@ O histórico é mantido em memória pelo processo do servidor (até 720 registro
 
 ## Modelo e limites
 
-Em cada UF e ZZ, votos restantes = votos válidos do primeiro turno × razão de seções entre turnos × fração de seções restantes. A preferência combina o observado na UF com Lula / (Lula + Flávio) do primeiro turno, com peso p / (p + 0,05) para a observação atual.
+Em cada UF e ZZ, os votos restantes são o número de seções pendentes multiplicado pela média esperada de votos válidos por seção. A média combina o primeiro turno real e o segundo turno já observado. A preferência combina Lula / (Lula + Flávio) do primeiro turno com a proporção observada na própria UF. Ambas usam peso p / (p + 0,05) para a observação atual. Assim, o modelo aprende tanto a preferência quanto o volume de votos por seção conforme a contagem avança.
 
-É uma extrapolação experimental, sem validação retrospectiva nem probabilidade de vitória. Perfis diferentes dentro de uma UF, transferência de votos, comparecimento e votos inválidos podem gerar erro. A ordem do Nordeste não é fixada no modo oficial; o simulador permite testar essa hipótese separadamente.
+É uma extrapolação experimental, sem validação retrospectiva nem probabilidade de vitória. Perfis diferentes dentro de uma UF, transferência de votos, comparecimento e votos inválidos podem gerar erro. A referência eleitoral é específica de cada UF e do exterior. O ritmo de chegada é observado nos arquivos; nenhuma região tem atraso fixado.
 
 Para atualizar a referência oficial e a malha do IBGE: `npm run refresh-reference`, seguido de novo build.

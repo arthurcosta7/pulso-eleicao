@@ -1,11 +1,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import reference from '../data/reference.json' with { type: 'json' };
-import { demo } from '../src/lib/model.js';
+import { snapshotFixture } from './fixtures/snapshot.mjs';
 import { buildForecast, currentPoint, mergeHistory, selectHistoryThrough } from '../src/lib/forecast.js';
 
 test('The forecast starts exactly at the current official point, even when regional sources lag BR', () => {
-  const snapshot = demo(reference.states, .48);
+  const snapshot = snapshotFixture(reference.states, .48);
   snapshot.national.lula += 8000;
   snapshot.national.valid += 8000;
   const forecast = buildForecast(snapshot, reference.states);
@@ -16,8 +16,8 @@ test('The forecast starts exactly at the current official point, even when regio
 });
 
 test('The full projected path reaches 100%, conserves votes and never removes observed votes', () => {
-  const snapshot = demo(reference.states, .58);
-  const previous = demo(reference.states, .55);
+  const snapshot = snapshotFixture(reference.states, .58);
+  const previous = snapshotFixture(reference.states, .55);
   const forecast = buildForecast(snapshot, reference.states, { previous });
   assert.equal(forecast.method, 'observed-pace');
   assert.equal(forecast.final.progress, 100);
@@ -32,8 +32,8 @@ test('The full projected path reaches 100%, conserves votes and never removes ob
 });
 
 test('Completed apuração makes the forecast identical to now, with no fictitious future', () => {
-  const snapshot = demo(reference.states, 1);
-  const forecast = buildForecast(snapshot, reference.states, { swing: 10 });
+  const snapshot = snapshotFixture(reference.states, 1);
+  const forecast = buildForecast(snapshot, reference.states);
   assert.equal(forecast.points.length, 1);
   assert.equal(forecast.final.lula, snapshot.national.lula);
   assert.equal(forecast.final.flavio, snapshot.national.flavio);
@@ -41,24 +41,24 @@ test('Completed apuração makes the forecast identical to now, with no fictitio
 });
 
 test('No live votes or a missing UF means no forecast curve', () => {
-  assert.equal(buildForecast(demo(reference.states, 0), reference.states).available, false);
-  const snapshot = demo(reference.states, .5);
+  assert.equal(buildForecast(snapshotFixture(reference.states, 0), reference.states).available, false);
+  const snapshot = snapshotFixture(reference.states, .5);
   delete snapshot.states.ZZ;
   const forecast = buildForecast(snapshot, reference.states);
   assert.equal(forecast.available, false);
   assert.deepEqual(forecast.points, []);
 });
 
-test('Changing Northeast arrival speed changes the observed scenario without imposing its winner', () => {
-  const slow = demo(reference.states, .58, { northeastDelay: 2 });
-  const fast = demo(reference.states, .58, { northeastDelay: .5 });
+test('Different observed regional coverage changes the raw national result', () => {
+  const slow = snapshotFixture(reference.states, .58, { regionProgress: { Nordeste: .2 } });
+  const fast = snapshotFixture(reference.states, .58, { regionProgress: { Nordeste: .8 } });
   assert.ok(fast.states.BA.counted > slow.states.BA.counted);
   assert.ok(fast.national.lula / fast.national.valid > slow.national.lula / slow.national.valid);
 });
 
 test('History deduplicates unchanged results, ignores invalid points and filters superseded totals', () => {
-  const a = currentPoint(demo(reference.states, .4));
-  const b = currentPoint(demo(reference.states, .5));
+  const a = currentPoint(snapshotFixture(reference.states, .4));
+  const b = currentPoint(snapshotFixture(reference.states, .5));
   a.at = '2026-10-25T20:00:00Z';
   b.at = '2026-10-25T20:01:00Z';
   const history = mergeHistory([a], [a, b, { valid: 0 }]);

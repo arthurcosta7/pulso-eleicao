@@ -1,11 +1,96 @@
-import {test} from 'node:test';import assert from 'node:assert/strict';import {readFile} from 'node:fs/promises';
-import {normalize,project,demo,STATES,groupRows} from '../src/lib/model.js';
-const reference=JSON.parse(await readFile(new URL('../data/reference.json',import.meta.url))).states;
-test('No projection before the first vote, even with all regions loaded',()=>{const {states}=demo(reference,0),p=project(states,reference);assert.equal(p.available,false);assert.equal(p.unknown,0);assert.equal(p.observed,0);});
-test('All counted sections converge to the observed result, regardless of scenario swing',()=>{const {states,national}=demo(reference,1),p=project(states,reference,{swing:10});assert.equal(p.available,true);assert.equal(p.remaining,0);assert.equal(p.lula,national.lula);assert.equal(p.flavio,national.flavio);});
-test('Exterior is counted once and regional aggregates conserve votes',()=>{const {states,national}=demo(reference,.58),p=project(states,reference),groups=groupRows(p.rows);assert.equal(p.rows.length,28);assert.equal(p.rows.filter(r=>r.uf==='ZZ').length,1);assert.equal(p.observed,national.lula+national.flavio);assert.equal(groups.reduce((s,g)=>s+g.lula,0),national.lula);assert.equal(groups.find(g=>g.name==='Exterior').states,1);});
-test('Missing current region suppresses the national projection',()=>{const {states}=demo(reference,.58);delete states.BA;const p=project(states,reference);assert.equal(p.available,false);assert.equal(p.unknown,1);});
-test('Sensitivity changes only uncounted votes and keeps the projected electorate fixed',()=>{const {states}=demo(reference,.58),a=project(states,reference),b=project(states,reference,{swing:4});assert.equal(a.observed,b.observed);assert.equal(a.remaining,b.remaining);assert.ok(b.lula>a.lula);assert.ok(Math.abs(a.lula+a.flavio-b.lula-b.flavio)<1e-6);});
-test('Later Northeast sections cause a raw vs. weighted gap without changing observed votes',()=>{const {states,national}=demo(reference,.58),p=project(states,reference);assert.ok(p.share>national.lula/national.valid+.01);const groups=groupRows(p.rows),ne=groups.find(r=>r.name==='Nordeste'),se=groups.find(r=>r.name==='Sudeste');assert.ok(ne.counted/ne.sections<se.counted/se.sections);});
-test('Parse nested EA20 presidential results and reject malformed or inconsistent data',()=>{const fixture={carg:[{cd:'1',agr:[{par:[{cand:[{n:'13',vap:'60'},{n:'22',vap:'40'}]}]}]}],s:{ts:'20',st:'10'},v:{vv:'100',vb:'3',tvn:'2'},e:{te:'1000'},dg:'25/10/2026',hg:'18:00:00',idg:'test'};assert.deepEqual({...normalize(fixture)}, {lula:60,flavio:40,valid:100,sections:20,counted:10,electors:1000,blank:3,nullVotes:2,date:'25/10/2026',time:'18:00:00',id:'test',final:false,elected:null});assert.throws(()=>normalize({}));assert.throws(()=>normalize({...fixture,v:{vv:'99'}}));assert.throws(()=>normalize({...fixture,s:{ts:'20',st:'21'}}));});
-test('First-round reference contains all real UF strata, including exterior',()=>{assert.deepEqual(Object.keys(reference).sort(),STATES.map(s=>s.uf).sort());for(const s of Object.values(reference)){assert.ok(s.sections>0);assert.ok(s.valid>=s.lula+s.flavio);assert.ok(s.source.startsWith('https://resultados.tse.jus.br/oficial/ele2026/6257/'));}});
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import referenceData from '../data/reference.json' with { type: 'json' };
+import { normalize, project, STATES, groupRows } from '../src/lib/model.js';
+import { snapshotFixture } from './fixtures/snapshot.mjs';
+
+const reference = referenceData.states;
+
+test('Before live votes the regional preference is exactly the real first-round reference', () => {
+  const { states } = snapshotFixture(reference, 0);
+  const result = project(states, reference);
+  assert.equal(result.available, false);
+  assert.equal(result.unknown, 0);
+  for (const row of result.rows) {
+    const baseline = reference[row.uf];
+    assert.equal(row.share, baseline.lula / (baseline.lula + baseline.flavio));
+    assert.equal(row.credibility, 0);
+  }
+});
+
+test('Completed sections converge to observed votes', () => {
+  const { states, national } = snapshotFixture(reference, 1);
+  const result = project(states, reference);
+  assert.equal(result.remaining, 0);
+  assert.equal(result.lula, national.lula);
+  assert.equal(result.flavio, national.flavio);
+});
+
+test('Exterior and regional aggregates conserve votes and historical reference totals', () => {
+  const { states, national } = snapshotFixture(reference, .58);
+  const result = project(states, reference);
+  const groups = groupRows(result.rows);
+  assert.equal(result.rows.length, 28);
+  assert.equal(result.rows.filter(row => row.uf === 'ZZ').length, 1);
+  assert.equal(result.observed, national.lula + national.flavio);
+  assert.equal(groups.reduce((sum, group) => sum + group.lula, 0), national.lula);
+  assert.equal(groups.find(group => group.name === 'Exterior').states, 1);
+  assert.equal(groups.reduce((sum, group) => sum + group.referenceLula, 0),
+    Object.values(reference).reduce((sum, value) => sum + value.lula, 0));
+});
+
+test('A missing UF suppresses the national projection', () => {
+  const { states } = snapshotFixture(reference, .5);
+  delete states.BA;
+  const result = project(states, reference);
+  assert.equal(result.available, false);
+  assert.equal(result.unknown, 1);
+});
+
+test('More local counted votes replace historical preference with the observed preference', () => {
+  const early = project(snapshotFixture(reference, .01, { shares: { BA: .2 } }).states, reference);
+  const later = project(snapshotFixture(reference, .8, { shares: { BA: .2 } }).states, reference);
+  const first = early.rows.find(row => row.uf === 'BA');
+  const last = later.rows.find(row => row.uf === 'BA');
+  assert.ok(Math.abs(last.share - .2) < Math.abs(first.share - .2));
+  assert.ok(last.credibility > first.credibility);
+  assert.equal(last.referenceLula, reference.BA.lula);
+});
+
+test('Expected remaining volume adapts to actual votes per counted section', () => {
+  const regular = project(snapshotFixture(reference, .5).states, reference);
+  const lowerTurnout = project(snapshotFixture(reference, .5, { volume: .7 }).states, reference);
+  assert.ok(lowerTurnout.remaining < regular.remaining * .85);
+  assert.ok(lowerTurnout.remaining > 0);
+  for (const row of lowerTurnout.rows) assert.ok(row.estimatedLula >= row.lula);
+});
+
+test('Underrepresented regions retain their real historical weight in the final projection', () => {
+  const snapshot = snapshotFixture(reference, .5, {
+    regionProgress: { Nordeste: .2, Sudeste: .7, Sul: .8 },
+  });
+  const result = project(snapshot.states, reference);
+  assert.ok(result.share > snapshot.national.lula / snapshot.national.valid + .01);
+});
+
+test('Nested EA20 parsing rejects missing candidates and inconsistent totals', () => {
+  const fixture = {
+    carg: [{ cd: '1', agr: [{ par: [{ cand: [{ n: '13', vap: '60' }, { n: '22', vap: '40' }] }] }] }],
+    s: { ts: '20', st: '10' }, v: { vv: '100', vb: '3', tvn: '2' }, e: { te: '1000' },
+    dg: '25/10/2026', hg: '18:00:00', idg: 'test',
+  };
+  assert.equal(normalize(fixture).lula, 60);
+  assert.equal(normalize(fixture).flavio, 40);
+  assert.throws(() => normalize({}));
+  assert.throws(() => normalize({ ...fixture, v: { vv: '99' } }));
+  assert.throws(() => normalize({ ...fixture, s: { ts: '20', st: '21' } }));
+});
+
+test('The first-round reference covers every UF and the exterior with official source URLs', () => {
+  assert.deepEqual(Object.keys(reference).sort(), STATES.map(state => state.uf).sort());
+  for (const state of Object.values(reference)) {
+    assert.ok(state.sections > 0);
+    assert.ok(state.valid >= state.lula + state.flavio);
+    assert.ok(state.source.startsWith('https://resultados.tse.jus.br/oficial/ele2026/6257/'));
+  }
+});

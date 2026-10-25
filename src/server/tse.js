@@ -58,7 +58,7 @@ export function createElectionService({ fetcher = fetch, now = Date.now } = {}) 
         attemptedAt: checkedAt, refreshInterval: REFRESH_INTERVAL };
     }
 
-    const snapshot = { national, states, checkedAt, simulation: false };
+    const snapshot = { national, states, checkedAt };
     const forecast = buildForecast(snapshot, reference.states, { previous: cached?.snapshot });
     const point = currentPoint(snapshot);
     if (point && errors.length === 0) history = mergeHistory(history, [point]);

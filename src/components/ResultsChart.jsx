@@ -15,7 +15,7 @@ function candidateValue(point, key, metric) {
   return metric === 'votes' ? point[key] : point[key] / point.valid * 100;
 }
 
-export default function ResultsChart({ snapshot, forecast, history = [], simulation = false }) {
+export default function ResultsChart({ snapshot, forecast, history = [] }) {
   const [metric, setMetric] = useState('percent');
   const [fullScale, setFullScale] = useState(false);
   const [hidden, setHidden] = useState([]);
@@ -171,16 +171,14 @@ export default function ResultsChart({ snapshot, forecast, history = [], simulat
           <p>O placar atual e a previsão aparecerão juntos assim que o TSE divulgar a apuração.</p></div>}
 
         {chosen && <div className="chart-tooltip" role="status" style={{ left: `${Math.min(compactChart ? 68 : 77, Math.max(compactChart ? 32 : 13, x(chosen.progress) / width * 100))}%` }}>
-          <strong>{chosen.kind === 'forecast' ? 'Previsão' : simulation ? 'Simulado' : 'Apurado'} · {percent(chosen.progress)} das seções</strong>
+          <strong>{chosen.kind === 'forecast' ? 'Previsão' : 'Apurado'} · {percent(chosen.progress)} das seções</strong>
           {CANDIDATES.map(c => <div key={c.key}><span><b className="legend-dot" style={{ background: c.color }} />{c.name}</span>
             <b>{metric === 'votes' ? compact(chosen[c.key]) : percent(candidateValue(chosen, c.key, 'percent'))}</b></div>)}
-          {chosen.at && <small>{simulation ? 'Dados fictícios' : `Registrado às ${clock(chosen.at)}`}</small>}
+          {chosen.at && <small>Registrado às {clock(chosen.at)}</small>}
         </div>}
       </div>
 
-      <div className="chart-bottom"><Info size={15} /><p>{simulation
-        ? 'Todo este gráfico é fictício. A linha contínua é o passado simulado; a tracejada é a previsão a partir do ponto atual.'
-        : `${records.length} registro(s) real(is) coletado(s). ${records.length < 2 ? 'O histórico será formado com as próximas divulgações. ' : ''}A linha tracejada é uma extrapolação experimental, sem garantia de resultado.`}</p>
+      <div className="chart-bottom"><Info size={15} /><p>{`${records.length} registro(s) real(is) coletado(s). ${records.length < 2 ? 'O histórico será formado com as próximas divulgações. ' : ''}A previsão combina o 1º turno de cada UF com sua apuração atual e se adapta a cada atualização.`}</p>
         <span>{forecast?.method === 'observed-pace' ? 'Ritmo recente por UF' : 'Ritmo proporcional por UF'}</span></div>
     </section>
   );

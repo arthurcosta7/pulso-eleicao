@@ -15,8 +15,10 @@ export default function Methodology({ data }) {
       <p>As consultas ao TSE ocorrem em lotes de até quatro arquivos, com cache de 60 segundos e deduplicação de pedidos simultâneos. Cada arquivo tem seu próprio horário de divulgação.</p>
       <p>Se uma atualização falha, preservamos o último retrato completo. O placar nacional já inclui o exterior, que não é somado novamente.</p>
     </section><section className="panel method-block"><ChartNoAxesCombined size={22} /><h3>Como estimamos os votos restantes</h3>
-      <p>Em cada UF, o total de votos válidos do primeiro turno é ajustado pelo número de seções do segundo turno. Multiplicamos pela fração de seções que falta totalizar.</p>
+      <p>Em cada UF, o primeiro turno real fornece a referência de votos válidos por seção e a preferência entre Lula e Flávio. Isso considera a força eleitoral de cada candidato naquela UF e no exterior, sem fixar uma ordem de chegada das regiões.</p>
+      <p>O volume restante é o número de seções ainda não totalizadas multiplicado pelos votos esperados por seção. Essa média começa no primeiro turno e se ajusta à média observada no segundo conforme a apuração avança.</p>
       <p>A preferência nas urnas restantes combina o resultado atual da UF com a proporção Lula / (Lula + Flávio) do primeiro turno. O peso do resultado atual é p / (p + 0,05), sendo p a fração das seções totalizadas.</p>
+      <p>Por exemplo, uma UF historicamente favorável a um candidato continua contribuindo para a previsão enquanto tem muitas seções pendentes. À medida que suas urnas chegam, os votos reais substituem a estimativa. Não presumimos que a vantagem de nenhum candidato obrigatoriamente cairá.</p>
       <p>A projeção final adiciona somente os votos ainda esperados ao placar nacional atual. Isso garante que as linhas tracejadas comecem exatamente na situação observada.</p>
     </section></div>
     <section className="panel method-block"><h3>Como ler o gráfico completo</h3>

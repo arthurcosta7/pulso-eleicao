@@ -5,21 +5,31 @@ import { Globe2, Search, ArrowDownUp } from 'lucide-react';
 import { groupRows, REGIONS, STATES } from '../lib/model.js';
 import { compact, percent, sourceLabel } from '../lib/format.js';
 
+function referenceLabel(lula, flavio) {
+  const total = lula + flavio;
+  if (!total) return 'Referência indisponível';
+  if (lula === flavio) return 'Empate';
+  return `${lula > flavio ? 'Lula' : 'Flávio'} ${percent(Math.max(lula, flavio) / total * 100)}`;
+}
+
 export function RegionalOverview({ rows = [], onSelect }) {
   const groups = groupRows(rows);
   const Row = onSelect ? 'button' : 'div';
   return <section className="panel region-overview"><div className="section-heading">
-    <div><h2>O ritmo de cada região</h2><p>Quanto de cada região já entrou no placar.</p></div><Globe2 size={19} />
+    <div><h2>O peso de cada região</h2><p>Apuração atual e referência real do primeiro turno.</p></div><Globe2 size={19} />
   </div><div className="regional-bars">{groups.map(group => {
     const progress = group.sections ? group.counted / group.sections * 100 : 0;
     return <Row className="regional-row" key={group.name} onClick={onSelect ? () => onSelect(group.name) : undefined}>
       <span>{group.name}</span><span className="progress-track"><span style={{ width: `${progress}%` }} /></span>
-      <strong>{group.sections ? percent(progress) : '—'}</strong><small>{compact(group.remaining)} votos restantes</small>
+      <strong>{group.sections ? percent(progress) : '—'}</strong><small>
+        <span>1º turno: {referenceLabel(group.referenceLula, group.referenceFlavio)}</span>
+        <span>{compact(group.remaining)} votos restantes estimados</span>
+      </small>
     </Row>;
   })}</div></section>;
 }
 
-export default function RegionsPanel({ rows = [], initialRegion = '', simulation = false }) {
+export default function RegionsPanel({ rows = [], initialRegion = '' }) {
   const [query, setQuery] = useState('');
   const [region, setRegion] = useState(initialRegion);
   const [sort, setSort] = useState('remaining');
@@ -88,7 +98,7 @@ export default function RegionsPanel({ rows = [], initialRegion = '', simulation
     </div>
 
     <section className="panel table-panel" id="uf-table"><div className="section-heading table-heading"><div>
-      <h2>As urnas que ainda faltam</h2><p>Percentuais de candidatos calculados entre os votos apurados de cada UF.</p></div>
+      <h2>As urnas que ainda faltam</h2><p>Compare o placar atual com a referência do 1º turno entre Lula e Flávio em cada UF.</p></div>
       <div className="table-filters"><label className="search-input"><Search size={16} /><input
         aria-label="Buscar estado ou UF" placeholder="Estado ou UF" value={query} onChange={event => setQuery(event.target.value)} /></label>
         <select aria-label="Região" value={region} onChange={event => setRegion(event.target.value)}>
@@ -96,7 +106,7 @@ export default function RegionsPanel({ rows = [], initialRegion = '', simulation
         </select><label className="sort-select"><ArrowDownUp size={15} /><select aria-label="Ordenar UFs" value={sort} onChange={event => setSort(event.target.value)}>
           <option value="remaining">Mais votos restantes</option><option value="progress">Menos apurado</option><option value="name">Nome do estado</option></select></label>
       </div></div>
-      <div className="table-scroll"><table><thead><tr><th>UF / abrangência</th><th>Seções totalizadas</th><th>Lula</th><th>Flávio Bolsonaro</th><th>Votos restantes<br /><small>Estimativa</small></th><th>Divulgação do TSE</th></tr></thead>
+      <div className="table-scroll"><table><thead><tr><th>UF / abrangência</th><th>Seções totalizadas</th><th>Lula</th><th>Flávio Bolsonaro</th><th>Referência 1º turno<br /><small>Entre os dois candidatos</small></th><th>Votos restantes<br /><small>Estimativa adaptativa</small></th><th>Divulgação do TSE</th></tr></thead>
         <tbody>{filtered.map(row => {
           const valid = row.lula + row.flavio;
           return <tr key={row.uf}><td><span className="uf-chip">{row.uf}</span>{row.name}</td>
@@ -104,9 +114,10 @@ export default function RegionsPanel({ rows = [], initialRegion = '', simulation
               {row.missing ? '—' : percent(row.progress * 100)}</div></td>
             <td className="lula-text">{valid ? percent(row.lula / valid * 100) : '—'}</td>
             <td className="flavio-text">{valid ? percent(row.flavio / valid * 100) : '—'}</td>
+            <td className="historical-cell">{referenceLabel(row.referenceLula, row.referenceFlavio)}</td>
             <td>{row.missing ? '—' : compact(row.remaining)}</td>
-            <td className="source-cell">{simulation ? 'Dados fictícios' : row.missing ? 'Indisponível' : sourceLabel(row)}</td></tr>;
-        })}{!filtered.length && <tr><td colSpan={6} className="table-empty">Nenhuma UF encontrada. Limpe os filtros para ver todas.</td></tr>}</tbody>
+            <td className="source-cell">{row.missing ? 'Indisponível' : sourceLabel(row)}</td></tr>;
+        })}{!filtered.length && <tr><td colSpan={7} className="table-empty">Nenhuma UF encontrada. Limpe os filtros para ver todas.</td></tr>}</tbody>
       </table></div><div className="table-foot"><span>{filtered.length} de 28 abrangências</span><span>Exterior incluído uma única vez no Brasil.</span></div>
     </section>
   </div>;
