@@ -1,6 +1,6 @@
+import { readFileSync } from 'node:fs';
 import vinext from 'vinext';
 import { defineConfig } from 'vite';
-import hostingConfig from './.openai/hosting.json';
 import { readExecutionProfile } from './scripts/execution-profile.mjs';
 import { configureToolEnvironment } from './scripts/tool-environment.mjs';
 import { sites } from './scripts/vite/sites-vite-plugin';
@@ -8,7 +8,18 @@ import { connectorPreview } from './scripts/vite/connector-preview-plugin.mjs';
 
 const SITE_CREATOR_PLACEHOLDER_DATABASE_ID = '00000000-0000-4000-8000-000000000000';
 
-const { d1, r2 } = hostingConfig;
+// Render and clean Git checkouts use the Node server, without Sites metadata.
+let hostingConfig: { d1?: string | null; r2?: string | null } | null = null;
+if (process.env.RENDER !== 'true') {
+  try {
+    hostingConfig = JSON.parse(
+      readFileSync(new URL('./.openai/hosting.json', import.meta.url), 'utf8'),
+    );
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+  }
+}
+const { d1, r2 } = hostingConfig ?? {};
 
 // macOS Seatbelt blocks FSEvents, so Codex previews need polling for HMR.
 const isCodexSeatbeltSandbox = process.env.CODEX_SANDBOX === 'seatbelt';
@@ -37,6 +48,15 @@ const localBindingConfig = {
 };
 
 export default defineConfig(async ({ command }) => {
+  if (!hostingConfig) {
+    return {
+      plugins: [vinext()],
+      server: {
+        ...(isCodexSeatbeltSandbox ? { watch: { useFsEvents: false, usePolling: true } } : {}),
+      },
+    };
+  }
+
   configureToolEnvironment(process.cwd());
 
   // Wrangler snapshots its log path while the Cloudflare plugin is imported.

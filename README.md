@@ -20,7 +20,11 @@ npm run build
 npm start
 ```
 
-Produção em Node: http://localhost:3000. `npm start` usa o servidor HTTP de produção do Vinext em Node.js. A publicação do Sites usa a mesma aplicação compilada com o adaptador Cloudflare e compatibilidade com Node; o público e o endereço existentes são preservados.
+Produção em Node: http://localhost:3000. `npm start` usa o servidor HTTP de produção do Vinext em Node.js e respeita a variável `PORT`.
+
+No Render, crie um Web Service com Node 24, Build Command `npm ci --include=dev && npm run build` e Start Command `npm start`. Use como diretório raiz a pasta que contém este `package.json`.
+
+No Render (`RENDER=true`) ou em um clone sem `.openai/hosting.json`, o build usa Node e não precisa desse arquivo local. Quando o arquivo está presente fora do Render, a publicação do Sites usa o adaptador Cloudflare. `.openai/` continua fora do Git.
 
 ## Organização
 
